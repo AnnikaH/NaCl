@@ -43,7 +43,7 @@ Iface eth3 {
     ip4: {
         address: 10.100.100.100,
         netmask: 255.255.255.0,
-        gateway: 100.100.100.1
+        gateway: 100.100.100.1,
         vlan: {
             my_vlan: {
                 address: 10.100.0.10,
