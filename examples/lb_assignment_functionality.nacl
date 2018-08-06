@@ -1,14 +1,18 @@
 Iface outside {
-    address: 10.20.17.71,
-    netmask: 255.255.255.0,
-    gateway: 10.20.17.1,
+    ip4: {
+        address: 10.20.17.71,
+        netmask: 255.255.255.0,
+        gateway: 10.20.17.1
+    },
     index: 0
 }
 
 Iface inside {
-    address: 10.20.17.72,
-    netmask: 255.255.255.0,
-    gateway: 10.20.17.1,
+    ip4: {
+        address: 10.20.17.72,
+        netmask: 255.255.255.0,
+        gateway: 10.20.17.1
+    },
     index: 1
 }
 
@@ -47,12 +51,12 @@ node_pool: [
 ]
 
 # node_pool: [
-#    {
-#        address: 10.20.17.81,
-#        port: 80
-#    },
-#    {
-#        address: 10.20.17.82,
-#        port: 80
-#    }
+#   {
+#       address: 10.20.17.81,
+#       port: 80
+#   },
+#   {
+#       address: 10.20.17.82,
+#       port: 80
+#   }
 # ]
