@@ -87,10 +87,20 @@ class NaCl_state(object):
 			CT,
 			IP
 		]
-		self.nacl_type_processors = {} # e.g. nacl_types/valid_nacl_types
+
+		# Dictionary of type_processors (all typed NaCl elements like Iface, Conntrack and Gateway have a corresponding
+		# type_processor class that says how the NaCl element is to be transpiled and what are valid members and values)
+		# All type processor classes are located in the type_processors folder. These will register themselves in
+		# this dictionary when their init methods are called (in the main function below)
+		self.nacl_type_processors = {}
+
 		self.singletons = [] 	# list of NaCl types (nacl_type_processors) that
 								# there's only allowed to create ONE element of
-		self.pystache_data = {} # e.g. data in handle_input
+
+		# The pystache_data dictionary will contain all the data that is sent to the mustache file
+		# This data needs to have a certain format for mustache to access it
+		# Every type_processor registers the data it wants to send to the mustache file
+		self.pystache_data = {} # e.g. data in the handle_input function
 
 		# Languages that NaCl can be transpiled to
 		self.valid_languages = [
@@ -212,8 +222,8 @@ class NaCl_state(object):
 # < NaCl_state
 
 # -------------------- Element --------------------
-# Each Element is a top NaCl element from the NaCl file given as input to this python script
-# The Antlr parser identifies these elements and they are visited in
+# Each Element is a top NaCl element from the NaCl file given as input to this python script (f.ex. Iface, Gateway, Filter and untyped elements)
+# The Antlr parser identifies these elements when they are visited (NaClRecordingVisitor)
 
 class Element(object):
 	def __init__(self, nacl_state, idx, name, ctx, base_type):
@@ -223,13 +233,8 @@ class Element(object):
 		self.name 		= name
 		self.ctx 		= ctx
 		self.base_type 	= base_type
+
 		self.res 		= None
-
-		self.handle_as_untyped = True # Default (preferred)
-
-		# Use res
-		# self.values 	= None # Resolved all the element's values so can be used
-		            	       # when transpiling comparisons inside functions
 
 		# Fill members dictionary if this is a top element with a value of type obj
 		self.members = {}
@@ -250,80 +255,20 @@ class Element(object):
 	def get_class_name(self):
 		return self.__class__.__name__
 
-	# TODO - make handle_as_untyped the only option - then this method will be redundant: Vlan and Iface
-	# This is ONLY implemented in the Vlan and Iface classes
-	# Every other class does nothing here
-	# If not valid - throw exception
-	def validate_key(self, key):
-		pass
-
-	# Can be overridden in subclass
-	# Iface is special here and should override the method
-	def add_member(self, key, value):
-		if self.members.get(key) is None:
-			self.members[key] = value
-		else:
-			raise NaCl_exception(self.get_class_name() + " member " + key + " has already been set")
-
-	# This is a special case, where we create a Typed element in NaCl (meaning the element is of a NaCl type,
-	# f.ex. Iface) and the value of the element is NOT an object ({}). Example: 'Iface eth0 dhcp'
-	# (type is Iface and value is dhcp)
-	def add_not_obj_value(self, value_ctx):
-		raise NaCl_exception(self.get_class_name() + " has to contain key value pairs")
-
-	# The first method that is called in every standard type_processor's process method
+	# The first method that is called in all standard type_processor's process method
 	# (not in function, which is special and don't use the self.members dictionary)
+	# (overridden by Iface and Gateway)
 	# Adding to self.members (dictionary)
-	# Rename?: process_object?
 	def process_ctx(self):
-		# Handle the Element's value ctx object: Fill self.members dictionary
-		# Note: Gateway has its own process_ctx method
+		# Handle the Element's value-ctx object: Fill self.members dictionary
 
 		value = self.ctx.value() if hasattr(self.ctx, 'value') else self.ctx
 		class_name = self.get_class_name()
 
-		# Using Untyped methods (placed in Element) since depth is more than 1 level deep
-		if self.handle_as_untyped:
-			if value.obj() is None:
-				exit_NaCl(value, class_name + " must be an object")
-			self.process_obj(self.members, value.obj())
-			return
+		if value.obj() is None:
+			exit_NaCl(value, class_name + " must be an object")
 
-		# TODO: This approach should NOT be an option - Gateway, Vlan and Iface should be updated to handle_as_untyped
-		# Everything else but Load_balancer, Conntrack and Syslog (meaning Gateway, Vlan and Iface):
-		if value.obj() is not None:
-			for pair in value.obj().key_value_list().key_value_pair():
-				orig_key 	= pair.key().getText()
-				key 		= orig_key.lower()
-				pair_value 	= pair.value()
-
-				try:
-					# TODO - make handle_as_untyped the only option - then this method will be redundant: Vlan and Iface
-					# are the only classes that (need to) call this method
-					# The old solution only tested this for vlan and iface:
-					# Default (if method is not implemented in subclass): Do nothing
-					self.validate_key(orig_key) # check if key exists in predefined_iface_keys f.ex.
-				except NaCl_exception as e:
-					exit_NaCl(pair.key(), e.value)
-
-				# TODO: Can be removed later? Checked in self.add_member-method
-				if self.members.get(key) is not None:
-					exit_NaCl(pair.key(), class_name + " member " + key + " has already been set")
-
-				# TODO: Implement this method in all classes that needs to do other operations
-				# than just adding the key value pair to the self.members dictionary
-				try:
-					self.add_member(key, pair_value)
-				except NaCl_exception as e:
-					exit_NaCl(pair.key(), e.value)
-				# Default add_member behavior: self.members[key] = pair_value
-				# Special if is_iface and key in chains: self.process_push(key, pair_value)
-		else:
-			try:
-				self.add_not_obj_value(value)
-			except NaCl_exception as e:
-				exit_NaCl(value, e.value)
-				# sys.exit("line " + get_line_and_column(value) + " A " + class_name + " has to contain key value pairs")
+		self.process_obj(self.members, value.obj())
 
 	def process_assignments(self):
 		# Loop through elements that are assignments
@@ -350,8 +295,6 @@ class Element(object):
 	# ---------- Methods related to dictionary self.members (for Untyped, Load_balancer, Conntrack and Syslog) ----------
 
 	def process_assignment(self, element_key):
-		# Could be either Untyped, Load_balancer, Conntrack or Syslog
-
 		element = self.nacl_state.elements.get(element_key)
 
 		# Remove first part (the name of this element)
@@ -359,14 +302,13 @@ class Element(object):
 		assignment_name_parts.pop(0)
 
 		# Check if this key has already been set in this element
-		# In that case: Error: Value already set
+		# In that case: Error (member/key already set)
 		if self.get_dictionary_val(self.members, list(assignment_name_parts), element.ctx) is not None:
 			exit_NaCl(element.ctx, "Member " + element.name + " has already been set")
 		else:
-			# Add to members dictionary
+			# Add to self.members dictionary
 			num_name_parts = len(assignment_name_parts)
 			parent_key = "" if len(assignment_name_parts) < 2 else assignment_name_parts[num_name_parts - 2]
-
 			self.add_dictionary_val(self.members, assignment_name_parts, element.ctx.value(), num_name_parts, parent_key)
 
 	# Called when resolving values
@@ -400,7 +342,7 @@ class Element(object):
 	# Add a specific value (ctx) to the given dictionary (at top level the dictionary input is normally self.members)
 	# The key_list (f.ex. lb.clients.iface) indicates where in the dictionary the new value should be put
 	def add_dictionary_val(self, dictionary, key_list, value, level=1, parent_key=""):
-		level_key = key_list[0] if self.handle_as_untyped else key_list[0].lower()
+		level_key = key_list[0] # if self.handle_as_untyped else key_list[0].lower()
 
 		# End of recursion condition
 		if len(key_list) == 1:
@@ -409,11 +351,10 @@ class Element(object):
 				dictionary[level_key] = {} # Create new dictionary
 				return self.process_obj(dictionary[level_key], value.obj(), (level + 1), level_key)
 			else:
-				if self.handle_as_untyped:
-					self.validate_dictionary_key(level_key, parent_key, level, value)
-					self.resolve_dictionary_value(dictionary, level_key, value)
-				else:
-					dictionary[level_key] = self.nacl_state.transpile_value(value)
+				# Validate key
+				self.validate_dictionary_key(level_key, parent_key, level, value)
+				# Resolve the value
+				self.resolve_dictionary_value(dictionary, level_key, value)
 				return
 
 		# Error
@@ -427,26 +368,19 @@ class Element(object):
 				return self.add_dictionary_val(dictionary[key], key_list[1:], value, level, level_key)
 
 	def process_obj(self, dictionary, ctx, level=1, parent_key=""):
-		# Could be either Untyped, Load_balancer, Conntrack or Syslog
-		# Level only relevant for Load_balancer, Conntrack and Syslog
-
 		for pair in ctx.key_value_list().key_value_pair():
-			key = pair.key().getText() if self.handle_as_untyped else pair.key().getText().lower()
+			key = pair.key().getText() # if self.handle_as_untyped else pair.key().getText().lower()
 
 			if dictionary.get(key) is not None:
 				exit_NaCl(pair.key(), "Member " + key + " has already been set")
 
 			# Validate key
-
-			if self.handle_as_untyped:
-				self.validate_dictionary_key(key, parent_key, level, pair.key())
+			self.validate_dictionary_key(key, parent_key, level, pair.key())
 
 			# End of recursion:
 			if pair.value().obj() is None:
-				if self.handle_as_untyped:
-					self.resolve_dictionary_value(dictionary, key, pair.value())
-				else:
-					dictionary[key] = self.nacl_state.transpile_value(pair.value())
+				# Resolve the value
+				self.resolve_dictionary_value(dictionary, key, pair.value())
 			else:
 				# Recursion:
 				# Then we have an obj inside an obj
@@ -588,13 +522,19 @@ class NaClRecordingVisitor(NaClVisitor):
 if __name__ == "__main__":
 	nacl_state = NaCl_state(CPP)
 
-	# print "Register all subtranspilers"
+	# The init function in subtranspilers/__init__.py will loop through all the modules (.py files)
+	# in the folder and will in turn call each module's init function. Each subtranspiler calls
+	# nacl_state's register_subtranspiler method in their init function.
+	# A subtranspiler is a helper module that is used by many type_processors (see below), f.ex. must
+	# every type_processor (f.ex. Iface) transpile the values that are set in the NaCl file, and
+	# for that purpose we have a value_transpiler (it can f.ex. resolve the value 'MY_PORT' to '90')
 	from subtranspilers import init as init_subtranspilers
 	init_subtranspilers(nacl_state)
 
-	# print "Register all type processors"
 	# The init function in type_processors/__init__.py will loop through all the modules (.py files)
-	# in the folder and will in turn call each module's init function:
+	# in the folder and will in turn call each module's init function. Each type_processor registers
+	# themselves in nacl_state as valid NaCl element types, and they also create the pystache lists
+	# that they want to fill up during the execution of the program (in each type_processor's init function)
 	from type_processors import init as init_type_processors
 	init_type_processors(nacl_state)
 

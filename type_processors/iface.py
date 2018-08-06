@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 # To avoid: <...>/NaCl/type_processors/iface.py:1: RuntimeWarning: Parent module '<...>/NaCl/type_processors' not found while handling absolute import
 
-from NaCl import exit_NaCl, NaCl_exception, Typed, BASE_TYPE_TYPED_INIT, BASE_TYPE_FUNCTION, DOT
+from NaCl import exit_NaCl, Typed, BASE_TYPE_TYPED_INIT, BASE_TYPE_FUNCTION
 from shared import *
 # TYPE_IFACE, TYPE_NAT, TEMPLATE_KEY_IFACE_PUSHES, TEMPLATE_KEY_ENABLE_CT_IFACES, TEMPLATE_KEY_HAS_NATS,
 # TRUE, FALSE
@@ -26,13 +26,24 @@ from shared import *
 
 # Moved to shared.py: TYPE_IFACE = "iface"
 
-# Iface keys
+# Iface top members
+
+IFACE_KEY_INDEX 	= "index"
+IFACE_KEY_IP4 		= "ip4"
+# IFACE_KEY_IP6 = "ip6"
+
+PREDEFINED_IFACE_KEYS = [
+	IFACE_KEY_INDEX,
+	IFACE_KEY_IP4,
+	# IFACE_KEY_IP6
+]
+
+# Iface keys (ip4)
 
 IFACE_KEY_ADDRESS 		= "address"
 IFACE_KEY_NETMASK 		= "netmask"
 IFACE_KEY_GATEWAY		= "gateway"
 IFACE_KEY_DNS 			= "dns"
-IFACE_KEY_INDEX 		= "index"
 IFACE_KEY_VLAN 			= "vlan"
 IFACE_KEY_MASQUERADE 	= "masquerade"
 IFACE_KEY_CONFIG 		= "config"
@@ -49,17 +60,16 @@ CHAIN_NAMES = [
 	IFACE_KEY_POSTROUTING
 ]
 
-PREDEFINED_IFACE_KEYS = [
+PREDEFINED_IFACE_IP4_KEYS = [
 	IFACE_KEY_ADDRESS,
 	IFACE_KEY_NETMASK,
 	IFACE_KEY_GATEWAY,
 	IFACE_KEY_DNS,
-	IFACE_KEY_INDEX,
 	IFACE_KEY_VLAN,
 	IFACE_KEY_MASQUERADE,
 	IFACE_KEY_CONFIG
 ]
-PREDEFINED_IFACE_KEYS.extend(CHAIN_NAMES)
+PREDEFINED_IFACE_IP4_KEYS.extend(CHAIN_NAMES)
 
 DHCP_CONFIG 			= "dhcp"
 DHCP_FALLBACK_CONFIG 	= "dhcp-with-fallback"
@@ -94,7 +104,7 @@ PREDEFINED_VLAN_KEYS = [
 
 # Template keys Vlan
 
-TEMPLATE_KEY_VLANS 			= "vlans"
+TEMPLATE_KEY_VLANS = "vlans"
 
 # Template keys Iface
 
@@ -110,61 +120,28 @@ TEMPLATE_KEY_HAS_AUTO_NATTING_IFACES 	= "has_auto_natting_ifaces"
 TEMPLATE_KEY_HAS_VLANS 					= "has_vlans"
 TEMPLATE_KEY_HAS_MASQUERADES 			= "has_masquerades"
 
+TEMPLATE_KEY_IP4 = "ip4"
+# TEMPLATE_KEY_IP6 = "ip6"
+
 TEMPLATE_KEY_CONFIG_IS_DHCP 			= "config_is_dhcp"
 TEMPLATE_KEY_CONFIG_IS_DHCP_FALLBACK 	= "config_is_dhcp_fallback"
 TEMPLATE_KEY_CONFIG_IS_STATIC 			= "config_is_static"
 
-TEMPLATE_KEY_INDEX 						= "index"
-TEMPLATE_KEY_ADDRESS 					= "address"
-TEMPLATE_KEY_NETMASK 					= "netmask"
-TEMPLATE_KEY_GATEWAY 					= "gateway"
-TEMPLATE_KEY_DNS 						= "dns"
+TEMPLATE_KEY_INDEX 		= "index"
+TEMPLATE_KEY_ADDRESS 	= "address"
+TEMPLATE_KEY_NETMASK 	= "netmask"
+TEMPLATE_KEY_GATEWAY 	= "gateway"
+TEMPLATE_KEY_DNS 		= "dns"
 
-TEMPLATE_KEY_IFACE_INDEX 				= "iface_index"
+TEMPLATE_KEY_IFACE_INDEX = "iface_index"
 
 # -------------------- CLASSES --------------------
 
-# ---- class Common (base class to the below classes Vlan and Iface) ----
-
-class Common(Typed):
-	def __init__(self, nacl_state, idx, name, ctx, base_type, type_t):
-		super(Common, self).__init__(nacl_state, idx, name, ctx, base_type, type_t)
-
-	def process_assignment(self, element_key):
-		# print "process assignment Common"
-
-		element = self.nacl_state.elements.get(element_key)
-
-		name_parts = element_key.split(DOT)
-		orig_member = name_parts[1]
-		member = orig_member.lower()
-
-		if len(name_parts) != 2:
-			exit_NaCl(element.ctx, "Invalid " + self.get_class_name() + " member " + element.name)
-
-		try:
-			self.validate_key(orig_member)
-		except NaCl_exception as e:
-			exit_NaCl(element.ctx, e.value)
-
-		if self.members.get(member) is not None:
-			exit_NaCl(element.ctx, "Member " + member + " has already been set")
-
-		found_element_value = element.ctx.value()
-		try:
-			self.add_member(member, found_element_value)
-		except NaCl_exception as e:
-			exit_NaCl(element.ctx, e.value)
-
-# < class Common
-
 # ---- class Vlan ----
 
-class Vlan(Common):
+class Vlan(Typed):
 	def __init__(self, nacl_state, idx, name, ctx, base_type, type_t):
 		super(Vlan, self).__init__(nacl_state, idx, name, ctx, base_type, type_t)
-
-		self.handle_as_untyped = False
 
 		# Vlan keys/members:
 		# address
@@ -172,13 +149,48 @@ class Vlan(Common):
 		# gateway
 		# index
 
+	# New:
 	# Overriding
-	def validate_key(self, key):
-		key_lower = key.lower()
-		if key_lower not in PREDEFINED_VLAN_KEYS:
-			raise NaCl_exception("Invalid Vlan member " + key)
+	def validate_dictionary_key(self, key, parent_key, level, value_ctx):
+		class_name = self.get_class_name()
 
-	def validate_members(self):
+		# TODO: Necessary?
+		key = key.lower()
+
+		if level == 1:
+			if key not in PREDEFINED_VLAN_KEYS:
+				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
+		else:
+			exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
+
+	# New:
+	# Overriding
+	def resolve_dictionary_value(self, dictionary, key, value_ctx):
+		# Creating/setting the self.members dictionary
+
+		# Keys have already been validated
+		# This method should make sure that the transpilation of the values
+		# is correct (based on the key) and then add that value to self.members:
+		# dictionary[key] = resolved_value
+
+		# Goal:
+		# Add found value to the dictionary (self.members), or if it is not necessary to add the value to self.members, just process the value
+		# dictionary[key] = self.nacl_state.transpile_value(value)
+
+		# If special handling / cases (the value should not be transpiled normally), add an if-option here:
+
+		# TODO: Necessary?
+		key_lower = key.lower()
+
+		# Validate values
+		if value_ctx.obj() is not None or value_ctx.list_t() is not None:
+			exit_NaCl(value_ctx, "The Vlan member " + key + " can not be an object or a list")
+
+		# Add found value
+		dictionary[key_lower] = self.nacl_state.transpile_value(value_ctx)
+
+	# Called by the Iface that this Vlan is added to
+	def check_mandatory_members(self):
 		vlan_index = self.members.get(VLAN_KEY_INDEX)
 		vlan_address = self.members.get(VLAN_KEY_ADDRESS)
 		vlan_netmask = self.members.get(VLAN_KEY_NETMASK)
@@ -186,27 +198,21 @@ class Vlan(Common):
 		if vlan_index is None or vlan_address is None or vlan_netmask is None:
 			exit_NaCl(self.ctx, "The members index, address and netmask must be set for every Vlan")
 
-		if vlan_index.obj() is not None or vlan_index.list_t() is not None:
-			exit_NaCl(vlan_index, "The Vlan member " + VLAN_KEY_INDEX + " can not be an object")
-		if vlan_address.obj() is not None or vlan_address.list_t() is not None:
-			exit_NaCl(vlan_address, "The Vlan member " + VLAN_KEY_ADDRESS + " can not be an object")
-		if vlan_netmask.obj() is not None or vlan_netmask.list_t() is not None:
-			exit_NaCl(vlan_netmask, "The Vlan member " + VLAN_KEY_NETMASK + " can not be an object")
-
-	def process_members(self):
-		# Transpile values
-		for key, member in self.members.iteritems():
-			self.members[key] = self.nacl_state.transpile_value(member)
-
 	# Main processing method
 	def process(self):
 		if self.res is None:
 			# Then process
 
+			# New:
+			self.process_ctx()
+			self.process_assignments()
+
+			''' Old (handle_as_untyped = False):
 			self.process_ctx()
 			self.process_assignments()
 			self.validate_members()
 			self.process_members()
+			'''
 
 			self.res = self.members
 
@@ -216,62 +222,118 @@ class Vlan(Common):
 
 # ---- class Iface ----
 
-class Iface(Common):
+class Iface(Typed):
 	def __init__(self, nacl_state, idx, name, ctx, base_type, type_t):
 		super(Iface, self).__init__(nacl_state, idx, name, ctx, base_type, type_t)
-
-		self.handle_as_untyped = False
-
-		self.config_is_dhcp 			= False
-		self.config_is_dhcp_fallback 	= False
-		self.config_is_static 			= False
 
 		self.chains = {}	# To handle setting of a chain multiple times in the same Iface
 		                	# Should not be handled as the ctx objects in self.members
 
 		# Iface keys/members:
-		# address
-		# netmask
-		# gateway
-		# dns
-		# index
-		# vlan
-		# config
-		# masquerade
-		# prerouting
-		# input
-		# forward
-		# output
-		# postrouting
+		# - ip4
+		# 	- address
+		# 	- netmask
+		# 	- gateway
+		# 	- dns
+		# 	- config
+		# 	- prerouting
+		# 	- input
+		# 	- output
+		# 	- postrouting
+		# 	- vlan (?)
+		# 	- masquerade (?)
+		# - index
+		# - ip6 (later)
+		# 	- address
+		# 	- gateway
+		# 	- dns
+		# 	- config (?)
+		# 	- prerouting
+		# 	- input
+		# 	- output
+		# 	- postrouting
+		# 	- vlan (?)
+		# 	- masquerade (?)
 
+	# New:
 	# Overriding
-	def validate_key(self, key):
-		key_lower = key.lower()
-		if key_lower not in PREDEFINED_IFACE_KEYS:
-			raise NaCl_exception("Invalid Iface member " + key)
+	def validate_dictionary_key(self, key, parent_key, level, value_ctx):
+		class_name = self.get_class_name()
 
+		# TODO: Necessary?
+		key = key.lower()
+
+		if level == 1:
+			if key not in PREDEFINED_IFACE_KEYS:
+				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
+			return
+
+		if parent_key == "":
+			exit_NaCl(value_ctx, "Internal error: Parent key of " + key + " has not been given")
+
+		if level == 2:
+			if parent_key == IFACE_KEY_IP4 and key not in PREDEFINED_IFACE_IP4_KEYS:
+				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key + " in " + self.name + "." + parent_key)
+		else:
+			exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
+
+	# New:
 	# Overriding
-	def add_member(self, key, value):
+	def resolve_dictionary_value(self, dictionary, key, value_ctx):
+		# Creating/setting the self.members dictionary
+
+		# Keys have already been validated
+		# This method should make sure that the transpilation of the values
+		# is correct (based on the key) and then add that value to self.members:
+		# dictionary[key] = resolved_value
+
+		# Goal:
+		# Add found value to the dictionary (self.members), or if it is not necessary to add the value to self.members, just process the value
+		# dictionary[key] = self.nacl_state.transpile_value(value)
+
+		# If special handling / cases (the value should not be transpiled normally), add an if-option here:
+
+		# TODO: Necessary?
+		key = key.lower()
+
 		if key in CHAIN_NAMES:
-			self.process_push(key, value)
-		else:
-			super(Iface, self).add_member(key, value) # self.members[key] = pair_value
+			# prerouting, input, output, postrouting
+			return self.process_and_add_push(key, value_ctx)
 
-	# Overriding
-	# TODO: Naming...
-	def add_not_obj_value(self, value_ctx):
-		if value_ctx.value_name() is not None:
-			# configuration type (dhcp, dhcp-with-fallback, static)
-			config = value_ctx.value_name().getText().lower()
-			if config in PREDEFINED_CONFIG_TYPES:
-				self.members[IFACE_KEY_CONFIG] = value_ctx
-			else:
-				raise NaCl_exception("Invalid Iface value " + value_ctx.value_name().getText())
-		else:
-			raise NaCl_exception("An Iface has to contain key value pairs, or be set to a configuration type (" + \
-				", ".join(PREDEFINED_CONFIG_TYPES) + ")")
+		if key == IFACE_KEY_MASQUERADE:
+			masq_val = self.nacl_state.transpile_value(value_ctx)
+			if not isinstance(masq_val, basestring) or (masq_val.lower() != TRUE and masq_val.lower() != FALSE):
+				exit_NaCl(member, "Invalid masquerade value. Must be set to true or false")
+			if masq_val == TRUE:
+				self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_MASQUERADES, {
+					TEMPLATE_KEY_IFACE: self.name
+				})
+			return
 
-	def process_push(self, chain, value_ctx):
+		found_element_value = value_ctx.getText()
+		if key == IFACE_KEY_CONFIG:
+			found_element_value = found_element_value.lower()
+			# The config value is just resolved to a string ("dhcp", "dhcp-with-fallback" or "static")
+			# Error if ip4.config is set but it has not been resolved to a string or the config value is not a valid config value
+			if found_element_value not in PREDEFINED_CONFIG_TYPES:
+				exit_NaCl(value_ctx, "Invalid config type. Valid values are " + ", ".join(PREDEFINED_CONFIG_TYPES))
+		elif key == IFACE_KEY_VLAN:
+			# Just add the value_ctx - this will be processed later
+			found_element_value = value_ctx
+		else:
+			# Default handling / case
+			# IFACE_KEY_INDEX
+			# IFACE_KEY_ADDRESS
+			# IFACE_KEY_NETMASK
+			# IFACE_KEY_GATEWAY
+			# IFACE_KEY_DNS
+			found_element_value = self.nacl_state.transpile_value(value_ctx)
+		# Add found value
+		dictionary[key] = found_element_value
+
+	# A push is when a function (Filter or Nat) is added to a chain in the NaCl file,
+	# f.ex. 'prerouting: my_filter'
+	def process_and_add_push(self, chain, value_ctx):
 		if self.chains.get(chain) is not None:
 			exit_NaCl(value_ctx, "Iface chain " + chain + " has already been set")
 
@@ -289,40 +351,57 @@ class Iface(Common):
 			exit_NaCl(value_ctx, "This is not supported: " + value_ctx.getText())
 
 		self.chains[chain] = chain # Mark as set
+		# Register the push in the pystache data
 		self.add_push(chain, functions)
 
-	def validate_members(self):
-		if self.members.get(IFACE_KEY_INDEX) is None:
-			exit_NaCl(self.ctx.value(), "An index needs to be specified for all Ifaces")
+	# Called by process_and_add_push
+	# A push is when a function (Filter or Nat) is added to a chain in the NaCl file,
+	# f.ex. 'prerouting: my_filter'
+	# Register a push in the pystache data
+	def add_push(self, chain, functions):
+		# chain: string with name of chain
+		# functions: list containing value_name ctxs, where each name corresponds to the name of a NaCl function
 
-		config = self.members.get(IFACE_KEY_CONFIG)
-		if config is not None and (config.value_name() is None or config.value_name().getText().lower() not in PREDEFINED_CONFIG_TYPES):
-			exit_NaCl(config, "Invalid config value " + config.getText())
+		add_auto_natting = False
+		function_names = []
+		num_functions = len(functions)
+		for i, function in enumerate(functions):
+			name = function.getText()
+			element = self.nacl_state.elements.get(name)
+			if element is None or element.base_type != BASE_TYPE_FUNCTION:
+				exit_NaCl(function, "No function with the name " + name + " exists")
 
-		if (config is None or config.value_name().getText().lower() != DHCP_CONFIG) and \
-			(self.members.get(IFACE_KEY_ADDRESS) is None or \
-				self.members.get(IFACE_KEY_NETMASK) is None):
-			exit_NaCl(self.ctx.value(), "The members " + IFACE_KEY_ADDRESS + " and " + IFACE_KEY_NETMASK + \
-				" must be set for every Iface if the Iface configuration hasn't been set to " + DHCP_CONFIG)
-		elif config is not None and config.value_name().getText().lower() == DHCP_CONFIG and \
-			(self.members.get(IFACE_KEY_ADDRESS) is not None or \
-				self.members.get(IFACE_KEY_NETMASK) is not None or \
-				self.members.get(IFACE_KEY_GATEWAY) is not None or \
-				self.members.get(IFACE_KEY_DNS) is not None):
-			exit_NaCl(config.value_name(), "An Iface with config set to dhcp should not specify " + IFACE_KEY_ADDRESS + \
-				", " + IFACE_KEY_NETMASK + ", " + IFACE_KEY_GATEWAY + " or " + IFACE_KEY_DNS)
+			# If a Nat function is pushed onto an Iface's chain,
+			# push the snat_translate lambda in cpp_template.mustache
+			# onto the same Iface's postrouting chain
+			# and push the dnat_translate lambda in cpp_template.mustache
+			# onto the same Iface's prerouting chain
+			if element.type_t.lower() == TYPE_NAT:
+				add_auto_natting = True
 
-	def is_vlan(self, element):
-		if element is None or not hasattr(element, 'type_t') or element.type_t.lower() != TYPE_VLAN:
-			return False
-		return True
+			function_names.append({TEMPLATE_KEY_FUNCTION_NAME: name, TEMPLATE_KEY_COMMA: (i < (num_functions - 1))})
 
-	def process_members(self):
-		# Vlans
+		if add_auto_natting:
+			self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_AUTO_NATTING_IFACES, {
+				TEMPLATE_KEY_IFACE: self.name
+			})
+
+		self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_IFACE_PUSHES, {
+			TEMPLATE_KEY_NAME:				self.name,
+			TEMPLATE_KEY_CHAIN: 			chain,
+			TEMPLATE_KEY_FUNCTION_NAMES: 	function_names
+		})
+
+	# New:
+	def process_and_add_vlans(self):
+		# Called once per Iface AFTER the Iface itself has been processed (self.members has been created and the values resolved)
+
 		vlans = []
-		if self.members.get(IFACE_KEY_VLAN) is not None:
-			vlan_ctx = self.members.get(IFACE_KEY_VLAN)
 
+		ip4 = self.members.get(IFACE_KEY_IP4)
+		vlan_ctx = ip4.get(IFACE_KEY_VLAN)
+
+		if vlan_ctx is not None:
 			if vlan_ctx.obj() is not None and any(pair.key().getText().lower() in PREDEFINED_VLAN_KEYS for pair in vlan_ctx.obj().key_value_list().key_value_pair()):
 				# Then handle this as a vlan object in itself, not an obj of vlans
 				vlan_element = Vlan(self.nacl_state, 0, "", vlan_ctx, BASE_TYPE_TYPED_INIT, TYPE_VLAN)
@@ -362,80 +441,19 @@ class Iface(Common):
 			else:
 				exit_NaCl(vlan_ctx, "An Iface's vlan needs to be a list of Vlans")
 
-		# Loop through self.members and transpile the values
-		for key, member in self.members.iteritems():
-			if key != IFACE_KEY_CONFIG and key != IFACE_KEY_MASQUERADE:
-				self.members[key] = self.nacl_state.transpile_value(member)
-
-				# Validate that an Iface with this Iface's index has not already been defined
-				if key == IFACE_KEY_INDEX:
-					for key, el in self.nacl_state.elements.iteritems():
-						if isinstance(el, Iface) and key != self.name:
-							el_idx = el.members.get(IFACE_KEY_INDEX)
-							if el_idx is not None and el_idx == self.members.get(IFACE_KEY_INDEX):
-								exit_NaCl(member, "Another Iface has been defined with index " + el_idx)
-			elif key == IFACE_KEY_CONFIG:
-				self.members[IFACE_KEY_CONFIG] = member.value_name().getText().lower()
-			else:
-				masq_val = self.nacl_state.transpile_value(member)
-
-				if not isinstance(masq_val, basestring) or (masq_val.lower() != TRUE and masq_val.lower() != FALSE):
-					exit_NaCl(member, "Invalid masquerade value. Must be set to true or false")
-
-				if masq_val == TRUE:
-					self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_MASQUERADES, {
-						TEMPLATE_KEY_IFACE: self.name
-					})
-
-		# Update config members
-		config = self.members.get(IFACE_KEY_CONFIG)
-		if config == DHCP_CONFIG:
-			self.config_is_dhcp = True
-		elif config == DHCP_FALLBACK_CONFIG:
-			self.config_is_dhcp_fallback = True
-		else:
-			self.config_is_static = True
-
 		if len(vlans) > 0:
 			# Process and add vlans found
-			self.add_iface_vlans(vlans)
+			self.add_vlans(vlans)
 
-	def add_push(self, chain, functions):
-		# chain: string with name of chain
-		# functions: list containing value_name ctxs, where each name corresponds to the name of a NaCl function
+	# Called by process_and_add_vlans
+	def is_vlan(self, element):
+		if element is None or not hasattr(element, 'type_t') or element.type_t.lower() != TYPE_VLAN:
+			return False
+		return True
 
-		add_auto_natting = False
-		function_names = []
-		num_functions = len(functions)
-		for i, function in enumerate(functions):
-			name = function.getText()
-			element = self.nacl_state.elements.get(name)
-			if element is None or element.base_type != BASE_TYPE_FUNCTION:
-				exit_NaCl(function, "No function with the name " + name + " exists")
-
-			# If a Nat function is pushed onto an Iface's chain,
-			# push the snat_translate lambda in cpp_template.mustache
-			# onto the same Iface's postrouting chain
-			# and push the dnat_translate lambda in cpp_template.mustache
-			# onto the same Iface's prerouting chain
-			if element.type_t.lower() == TYPE_NAT:
-				add_auto_natting = True
-
-			function_names.append({TEMPLATE_KEY_FUNCTION_NAME: name, TEMPLATE_KEY_COMMA: (i < (num_functions - 1))})
-
-		if add_auto_natting:
-			self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_AUTO_NATTING_IFACES, {
-				TEMPLATE_KEY_IFACE: self.name
-			})
-
-		self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_IFACE_PUSHES, {
-			TEMPLATE_KEY_NAME:				self.name,
-			TEMPLATE_KEY_CHAIN: 			chain,
-			TEMPLATE_KEY_FUNCTION_NAMES: 	function_names
-		})
-
-	def add_iface_vlans(self, vlans):
-		# Called once per Iface
+	# Called by process_and_add_vlans
+	def add_vlans(self, vlans):
+		# Called once per Iface AFTER the Iface itself has been processed (self.members has been created and the values resolved)
 
 		pystache_vlans = []
 		for vlan in vlans:
@@ -443,7 +461,11 @@ class Iface(Common):
 
 			gateway = vlan.members.get(VLAN_KEY_GATEWAY)
 			if gateway is None:
-				gateway = self.members.get(IFACE_KEY_GATEWAY)
+				# Use the same gateway as this Iface (could be None)
+				ip4 = self.members.get(IFACE_KEY_IP4)
+				gateway = ip4.get(IFACE_KEY_GATEWAY)
+
+			vlan.check_mandatory_members() # exits on error
 
 			pystache_vlans.append({
 				TEMPLATE_KEY_INDEX: 	vlan.members.get(VLAN_KEY_INDEX),
@@ -458,8 +480,75 @@ class Iface(Common):
 			TEMPLATE_KEY_VLANS: 		pystache_vlans
 		})
 
+	# Validate and append iface object to pystache ifaces list
 	def add_iface(self):
-		# Append iface object to pystache ifaces list
+		# This method should also validate the Iface object, f.ex. that every mandatory field is set
+
+		# -- index --
+
+		# index is a mandatory field
+		index = self.members.get(IFACE_KEY_INDEX)
+		if index is None:
+			exit_NaCl(self.ctx, "Iface member " + IFACE_KEY_INDEX + " has not been set")
+		else:
+			# Check that an Iface with this Iface's index has not already been defined
+			for key, el in self.nacl_state.elements.iteritems():
+				if isinstance(el, Iface) and key != self.name:
+					# If this element is an Iface and it is not the Iface that we are adding now,
+					# give an error if the indeces match
+					el_idx = el.members.get(IFACE_KEY_INDEX)
+					if el_idx is not None and el_idx == index:
+						exit_NaCl(self.ctx, "Another Iface has been defined with index " + el_idx)
+
+		# -- ip4 --
+
+		ip4_config_is_static = False
+		ip4_config_is_dhcp = False
+		ip4_config_is_dhcp_fallback = False
+
+		ip4 = self.members.get(IFACE_KEY_IP4)
+		# For now ip4 is mandatory
+		if ip4 is not None:
+			# Error if ip4 is not a dictionary (contains key value pairs)
+			if not isinstance(ip4, dict):
+				exit_NaCl(self.ctx, "Invalid value of Iface member " + IFACE_KEY_IP4 + \
+					". It needs to be an object containing " + ", ".join(PREDEFINED_IFACE_IP4_KEYS))
+
+			# Validate ip4's config member
+			# config value has previously been resolved to a string (lower case) (in resolve_dictionary_value)
+			config = ip4.get(IFACE_KEY_CONFIG)
+			if (config is None or config != DHCP_CONFIG) and (ip4.get(IFACE_KEY_ADDRESS) is None or ip4.get(IFACE_KEY_NETMASK) is None):
+				exit_NaCl(self.ctx, "The members " + IFACE_KEY_ADDRESS + " and " + IFACE_KEY_NETMASK + " must be set for every Iface if" + \
+					" the Iface configuration hasn't been set to " + DHCP_CONFIG)
+			elif config is not None and config == DHCP_CONFIG and \
+				(ip4.get(IFACE_KEY_ADDRESS) is not None or \
+				ip4.get(IFACE_KEY_NETMASK) is not None or \
+				ip4.get(IFACE_KEY_GATEWAY) is not None):
+				exit_NaCl(self.ctx, "An Iface with config set to " + DHCP_CONFIG + " can not specify " + IFACE_KEY_ADDRESS + \
+					", " + IFACE_KEY_NETMASK + " or " + IFACE_KEY_GATEWAY)
+
+			if config is None or config == STATIC_CONFIG:
+				ip4_config_is_static = True
+			elif config == DHCP_CONFIG:
+				ip4_config_is_dhcp = True
+			else: # config == DHCP_FALLBACK_CONFIG
+				ip4_config_is_dhcp_fallback = True
+		else:
+			exit_NaCl(self.ctx, "Iface member " + IFACE_KEY_IP4 + " has not been set")
+
+		# TODO: Does this have to be a list containing an object or can it just be an object?
+		pystache_ip4 = [{
+			TEMPLATE_KEY_ADDRESS: 	ip4.get(IFACE_KEY_ADDRESS),
+			TEMPLATE_KEY_NETMASK:	ip4.get(IFACE_KEY_NETMASK),
+			TEMPLATE_KEY_GATEWAY: 	ip4.get(IFACE_KEY_GATEWAY),
+			TEMPLATE_KEY_DNS: 		ip4.get(IFACE_KEY_DNS),
+
+			TEMPLATE_KEY_CONFIG_IS_STATIC: 			ip4_config_is_static,
+			TEMPLATE_KEY_CONFIG_IS_DHCP: 			ip4_config_is_dhcp,
+			TEMPLATE_KEY_CONFIG_IS_DHCP_FALLBACK: 	ip4_config_is_dhcp_fallback
+		}]
+
+		# -- add the Iface --
 
 		# Create object containing key value pairs with the data we have collected
 		# Append this object to the ifaces list
@@ -469,14 +558,9 @@ class Iface(Common):
 			TEMPLATE_KEY_TITLE: 	self.name.title(),
 			TEMPLATE_KEY_INDEX: 	self.members.get(IFACE_KEY_INDEX),
 
-			TEMPLATE_KEY_CONFIG_IS_STATIC: 			self.config_is_static,
-			TEMPLATE_KEY_CONFIG_IS_DHCP: 			self.config_is_dhcp,
-			TEMPLATE_KEY_CONFIG_IS_DHCP_FALLBACK: 	self.config_is_dhcp_fallback,
+			TEMPLATE_KEY_IP4: 		pystache_ip4
 
-			TEMPLATE_KEY_ADDRESS: 	self.members.get(IFACE_KEY_ADDRESS),
-			TEMPLATE_KEY_NETMASK:	self.members.get(IFACE_KEY_NETMASK),
-			TEMPLATE_KEY_GATEWAY: 	self.members.get(IFACE_KEY_GATEWAY),
-			TEMPLATE_KEY_DNS: 		self.members.get(IFACE_KEY_DNS)
+			# TEMPLATE_KEY_IP6: 	pystache_ip6
 		})
 
 	def enable_ct(self):
@@ -489,17 +573,52 @@ class Iface(Common):
 					})
 					return # Only one entry in enable_ct_ifaces list for each Iface
 
+	# New:
+	# This method is overridden because an Iface can be created with only one value: 'Iface eth0 dhcp'
+	# The default is that self.ctx is an obj() (object), but in an Iface it can also be a value_name() (dhcp)
+	# Overriding
+	def process_ctx(self):
+		value_ctx = self.ctx.value() if hasattr(self.ctx, 'value') else self.ctx
+
+		if value_ctx.value_name() is not None:
+			# configuration type (dhcp, dhcp-with-fallback, static)
+			config = value_ctx.value_name().getText().lower()
+			if config in PREDEFINED_CONFIG_TYPES:
+				# Old: self.members[IFACE_KEY_CONFIG] = value_ctx
+				# TODO: Test:
+				self.members[IFACE_KEY_IP4] = {
+					IFACE_KEY_CONFIG: config
+				}
+			else:
+				exit_NaCl(value_ctx, "Invalid Iface value " + value_ctx.value_name().getText())
+		elif value_ctx.obj() is not None:
+			# default
+			self.process_obj(self.members, value_ctx.obj())
+		else:
+			exit_NaCl(value_ctx, "An Iface has to contain key value pairs, or be set to a configuration type (" + \
+				", ".join(PREDEFINED_CONFIG_TYPES) + ")")
+
 	# Main processing method
 	def process(self):
 		if self.res is None:
 			# Then process
 
+			# New:
+			self.process_ctx()
+			self.process_assignments()
+			self.process_and_add_vlans() # Must be called after the Iface itself has been processed and the values resolved
+			self.add_iface()
+			self.enable_ct()
+
+			# Old (handle_as_untyped = False):
+			'''
 			self.process_ctx()
 			self.process_assignments()
 			self.validate_members()
 			self.process_members()
 			self.add_iface()
 			self.enable_ct()
+			'''
 
 			self.res = self.members
 

@@ -68,7 +68,6 @@ class Gateway(Typed):
     def __init__(self, nacl_state, idx, name, ctx, base_type, type_t):
         super(Gateway, self).__init__(nacl_state, idx, name, ctx, base_type, type_t)
 
-        self.handle_as_untyped = False
         self.pushes = []
 
         # self.members (in Element) to contain this Gateway's members as defined in NaCl file
@@ -110,6 +109,7 @@ class Gateway(Typed):
 
         return route_obj
 
+    # Overriding
     def process_ctx(self):
         # Handle the Element's value ctx object: Fill self.members dictionary
 
@@ -150,7 +150,7 @@ class Gateway(Typed):
                 "it must contain a list of objects")
 
     # Called in Element's process_assignments method
-    # Overriding:
+    # Overriding
     def process_assignment(self, element_key):
         element = self.nacl_state.elements.get(element_key)
 
