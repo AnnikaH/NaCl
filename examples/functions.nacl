@@ -1,9 +1,11 @@
 Iface eth0 {
-    address: 10.0.0.50,
-    netmask: 255.255.255.0,
-    gateway: 10.0.0.1,
-    index: 0,
-    input: my_ip_filter
+    ip4: {
+        address: 10.0.0.50,
+        netmask: 255.255.255.0,
+        gateway: 10.0.0.1,
+        input: my_ip_filter
+    },
+    index: 0
 }
 
 Filter::IP my_ip_filter {
