@@ -1,8 +1,10 @@
 Iface eth0 {
     index: 0,
-    address: 10.0.0.45,
-    netmask: 255.255.255.0,
-    gateway: 10.0.0.1
+    ip4: {
+        address: 10.0.0.45,
+        netmask: 255.255.255.0,
+        gateway: 10.0.0.1
+    }
 }
 
 Timer t1 {
