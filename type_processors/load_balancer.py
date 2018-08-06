@@ -31,7 +31,7 @@ LB_KEY_LAYER = "layer"
 LB_KEY_CLIENTS = "clients"
 LB_KEY_SERVERS = "servers"
 
-predefined_lb_keys = [
+PREDEFINED_LB_KEYS = [
 	LB_KEY_LAYER,
 	LB_KEY_CLIENTS,
 	LB_KEY_SERVERS
@@ -43,7 +43,7 @@ LB_KEY_PORT = "port"
 LB_CLIENTS_KEY_WAIT_QUEUE_LIMIT = "wait_queue_limit"
 LB_CLIENTS_KEY_SESSION_LIMIT = "session_limit"
 
-predefined_lb_clients_keys = [
+PREDEFINED_LB_CLIENTS_KEYS = [
 	LB_KEY_IFACE,
 	LB_KEY_PORT,
 	LB_CLIENTS_KEY_WAIT_QUEUE_LIMIT,
@@ -53,7 +53,7 @@ predefined_lb_clients_keys = [
 LB_SERVERS_KEY_ALGORITHM = "algorithm"
 LB_SERVERS_KEY_POOL = "pool"
 
-predefined_lb_servers_keys = [
+PREDEFINED_LB_SERVERS_KEYS = [
 	LB_KEY_IFACE,
 	LB_SERVERS_KEY_ALGORITHM,
 	LB_SERVERS_KEY_POOL
@@ -61,7 +61,7 @@ predefined_lb_servers_keys = [
 
 LB_NODE_KEY_ADDRESS = "address"
 
-predefined_lb_node_keys = [
+PREDEFINED_LB_NODE_KEYS = [
 	LB_NODE_KEY_ADDRESS,
 	LB_KEY_PORT
 ]
@@ -71,7 +71,7 @@ predefined_lb_node_keys = [
 ROUND_ROBIN = "round_robin"
 
 # FEWEST_CONNECTIONS = "fewest_connections"
-valid_lb_servers_algos = [
+VALID_LB_SERVERS_ALGOS = [
 	ROUND_ROBIN
 	# FEWEST_CONNECTIONS
 ]
@@ -129,14 +129,14 @@ class Load_balancer(Typed):
             exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_CLIENTS + " has not been set")
         if not isinstance(clients, dict):
             exit_NaCl(self.ctx, "Invalid value of Load_balancer member " + LB_KEY_CLIENTS + \
-                ". It needs to be an object containing " + ", ".join(predefined_lb_clients_keys))
+                ". It needs to be an object containing " + ", ".join(PREDEFINED_LB_CLIENTS_KEYS))
 
         servers = self.members.get(LB_KEY_SERVERS)
         if servers is None:
             exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + " has not been set")
         if not isinstance(servers, dict):
             exit_NaCl(self.ctx, "Invalid value of Load_balancer member " + LB_KEY_SERVERS + \
-                ". It needs to be an object containing " + ", ".join(predefined_lb_servers_keys))
+                ". It needs to be an object containing " + ", ".join(PREDEFINED_LB_SERVERS_KEYS))
 
         # Clients
 
@@ -172,7 +172,7 @@ class Load_balancer(Typed):
             exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_POOL + " has not been set")
         if not isinstance(pool, list):
             exit_NaCl(self.ctx, "Invalid value of Load_balancer member " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_POOL + \
-                ". It needs to be a list of objects containing " + ", ".join(predefined_lb_node_keys))
+                ". It needs to be a list of objects containing " + ", ".join(PREDEFINED_LB_NODE_KEYS))
 
         pystache_pool = []
         for s in pool:
@@ -197,14 +197,14 @@ class Load_balancer(Typed):
     # Overriding
     def validate_dictionary_key(self, key, parent_key, level, value_ctx):
         if level == 1:
-            if key not in predefined_lb_keys:
+            if key not in PREDEFINED_LB_KEYS:
                 exit_NaCl(value_ctx, "Invalid Load_balancer member " + key)
         elif level == 2:
             if parent_key == "":
                 exit_NaCl(value_ctx, "Internal error: Parent key of " + key + " has not been given")
-            if parent_key == LB_KEY_CLIENTS and key not in predefined_lb_clients_keys:
+            if parent_key == LB_KEY_CLIENTS and key not in PREDEFINED_LB_CLIENTS_KEYS:
                 exit_NaCl(value_ctx, "Invalid Load_balancer member " + key + " in " + self.name + "." + parent_key)
-            if parent_key == LB_KEY_SERVERS and key not in predefined_lb_servers_keys:
+            if parent_key == LB_KEY_SERVERS and key not in PREDEFINED_LB_SERVERS_KEYS:
                 exit_NaCl(value_ctx, "Invalid Load_balancer member " + key + " in " + self.name + "." + parent_key)
         else:
             exit_NaCl(value_ctx, "Invalid Load_balancer member " + key)
@@ -228,12 +228,12 @@ class Load_balancer(Typed):
             if element is None or (hasattr(element, 'type_t') and element.type_t.lower() != TYPE_IFACE):
                 exit_NaCl(value_ctx, "No Iface with the name " + found_element_value + " exists")
         elif key == LB_SERVERS_KEY_ALGORITHM:
-            if value_ctx.value_name() is None or found_element_value not in valid_lb_servers_algos:
+            if value_ctx.value_name() is None or found_element_value not in VALID_LB_SERVERS_ALGOS:
                 exit_NaCl(value_ctx, "Invalid algorithm " + value_ctx.getText())
         elif key == LB_SERVERS_KEY_POOL:
             if value_ctx.list_t() is None and value_ctx.value_name() is None:
                 exit_NaCl(value_ctx, "Invalid " + LB_SERVERS_KEY_POOL + " value. It needs to be a list of objects or the name " + \
-                    "of a list of objects containing " + ", ".join(predefined_lb_node_keys))
+                    "of a list of objects containing " + ", ".join(PREDEFINED_LB_NODE_KEYS))
 
             if value_ctx.value_name() is not None:
                 element_name = value_ctx.value_name().getText()
@@ -249,7 +249,7 @@ class Load_balancer(Typed):
             for i, node in enumerate(value_ctx.list_t().value_list().value()):
                 if node.obj() is None and node.value_name() is None:
                     exit_NaCl(node, "Invalid " + LB_SERVERS_KEY_POOL + " value. It needs to be a list of objects containing " + \
-                        ", ".join(predefined_lb_node_keys))
+                        ", ".join(PREDEFINED_LB_NODE_KEYS))
 
                 if node.value_name() is not None:
                     element_name = node.value_name().getText()
@@ -264,12 +264,12 @@ class Load_balancer(Typed):
                 n[TEMPLATE_KEY_INDEX] = i
                 for pair in node.obj().key_value_list().key_value_pair():
                     node_key = pair.key().getText().lower()
-                    if node_key not in predefined_lb_node_keys:
+                    if node_key not in PREDEFINED_LB_NODE_KEYS:
                         exit_NaCl(pair.key(), "Invalid member in node " + str(i) + " in " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_POOL)
                     n[node_key] = self.nacl_state.transpile_value(pair.value())
 
                 if n.get(LB_NODE_KEY_ADDRESS) is None or n.get(LB_KEY_PORT) is None:
-                    exit_NaCl(node, "An object in a " + LB_SERVERS_KEY_POOL + " needs to specify " + ", ".join(predefined_lb_node_keys))
+                    exit_NaCl(node, "An object in a " + LB_SERVERS_KEY_POOL + " needs to specify " + ", ".join(PREDEFINED_LB_NODE_KEYS))
 
                 pool.append(n)
 
@@ -286,7 +286,7 @@ class Load_balancer(Typed):
                 value_ctx = e.ctx.value()
 
             if value_ctx.obj() is None:
-                mandatory_keys = ", ".join(predefined_lb_clients_keys) if key == LB_KEY_CLIENTS else ", ".join(predefined_lb_servers_keys)
+                mandatory_keys = ", ".join(PREDEFINED_LB_CLIENTS_KEYS) if key == LB_KEY_CLIENTS else ", ".join(PREDEFINED_LB_SERVERS_KEYS)
                 exit_NaCl(value_ctx, "Invalid " + key + " value. It needs to be an object containing " + mandatory_keys)
 
             found_element_value = {}
@@ -302,6 +302,7 @@ class Load_balancer(Typed):
         # Add found value
         dictionary[key] = found_element_value
 
+    # Main processing method
     def process(self):
         if self.res is None:
             # Then process

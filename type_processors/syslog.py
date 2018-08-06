@@ -93,6 +93,7 @@ class Syslog(Typed):
     def resolve_dictionary_value(self, dictionary, key, value):
         dictionary[key] = self.nacl_state.transpile_value(value)
 
+    # Main processing method
     def process(self):
         if self.res is None:
             # Then process
