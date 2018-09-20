@@ -18,6 +18,7 @@ declare -a examples=(
 	"lb"
 	"lb_assignment_functionality"
 	"lb_assignment_functionality_2"
+	"lb_with_tls_termination"
 	"lb_with_uplink"
 	"log"
 	"nacl"

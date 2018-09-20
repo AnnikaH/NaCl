@@ -42,13 +42,21 @@ LB_KEY_PORT = "port"
 
 LB_CLIENTS_KEY_WAIT_QUEUE_LIMIT = "wait_queue_limit"
 LB_CLIENTS_KEY_SESSION_LIMIT = "session_limit"
+LB_CLIENTS_KEY_CERTIFICATE = "certificate"
+LB_CLIENTS_KEY_KEY = "key"
+
+MANDATORY_LB_CLIENTS_KEYS = [
+    LB_KEY_IFACE,
+    LB_KEY_PORT
+]
 
 PREDEFINED_LB_CLIENTS_KEYS = [
-	LB_KEY_IFACE,
-	LB_KEY_PORT,
-	LB_CLIENTS_KEY_WAIT_QUEUE_LIMIT,
-	LB_CLIENTS_KEY_SESSION_LIMIT
+    LB_CLIENTS_KEY_WAIT_QUEUE_LIMIT,
+    LB_CLIENTS_KEY_SESSION_LIMIT,
+    LB_CLIENTS_KEY_CERTIFICATE,
+    LB_CLIENTS_KEY_KEY
 ]
+PREDEFINED_LB_CLIENTS_KEYS.extend(MANDATORY_LB_CLIENTS_KEYS)
 
 LB_SERVERS_KEY_ALGORITHM = "algorithm"
 LB_SERVERS_KEY_POOL = "pool"
@@ -102,7 +110,10 @@ TEMPLATE_KEY_LB_SERVERS_IFACE       = "servers_iface_name"
 TEMPLATE_KEY_LB_POOL                = "pool"
 TEMPLATE_KEY_LB_NODE_ADDRESS        = "address"
 TEMPLATE_KEY_LB_NODE_PORT           = "port"
+TEMPLATE_KEY_LB_CLIENTS_CERTIFICATE = "certificate"
+TEMPLATE_KEY_LB_CLIENTS_KEY         = "key"
 
+TEMPLATE_KEY_LB_TLS_TERMINATION     = "tls_termination"
 TEMPLATE_KEY_HAS_LOAD_BALANCERS     = "has_load_balancers"
 
 # -------------------- Load_balancer --------------------
@@ -119,34 +130,34 @@ class Load_balancer(Typed):
         layer = self.members.get(LB_KEY_LAYER)
 
         if layer is None:
-            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_LAYER + " has not been set")
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_LAYER + " has not been set")
 
         if self.nacl_state.exists_in_pystache_list(TEMPLATE_KEY_LOAD_BALANCERS, TEMPLATE_KEY_LB_LAYER, layer):
             exit_NaCl(self.ctx, "A " + layer.upper() + " Load_balancer has already been defined")
 
         clients = self.members.get(LB_KEY_CLIENTS)
         if clients is None:
-            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_CLIENTS + " has not been set")
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + " has not been set")
         if not isinstance(clients, dict):
-            exit_NaCl(self.ctx, "Invalid value of Load_balancer member " + LB_KEY_CLIENTS + \
+            exit_NaCl(self.ctx, "Invalid value of " + self.get_class_name() + " member " + LB_KEY_CLIENTS + \
                 ". It needs to be an object containing " + ", ".join(PREDEFINED_LB_CLIENTS_KEYS))
 
         servers = self.members.get(LB_KEY_SERVERS)
         if servers is None:
-            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + " has not been set")
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_SERVERS + " has not been set")
         if not isinstance(servers, dict):
-            exit_NaCl(self.ctx, "Invalid value of Load_balancer member " + LB_KEY_SERVERS + \
+            exit_NaCl(self.ctx, "Invalid value of " + self.get_class_name() + " member " + LB_KEY_SERVERS + \
                 ". It needs to be an object containing " + ", ".join(PREDEFINED_LB_SERVERS_KEYS))
 
         # Clients
 
         clients_iface_name = clients.get(LB_KEY_IFACE)
         if clients_iface_name is None:
-            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_CLIENTS + "." + LB_KEY_IFACE + " has not been set")
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_KEY_IFACE + " has not been set")
 
         port = clients.get(LB_KEY_PORT)
         if port is None:
-            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_CLIENTS + "." + LB_KEY_PORT + " has not been set")
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_KEY_PORT + " has not been set")
 
         waitq_limit = clients.get(LB_CLIENTS_KEY_WAIT_QUEUE_LIMIT)
         if waitq_limit is None:
@@ -155,6 +166,19 @@ class Load_balancer(Typed):
         session_limit = clients.get(LB_CLIENTS_KEY_SESSION_LIMIT)
         if session_limit is None:
             session_limit = 1000
+
+        tls_termination = False
+        certificate = clients.get(LB_CLIENTS_KEY_CERTIFICATE)
+        key_clients = clients.get(LB_CLIENTS_KEY_KEY)
+        if certificate is not None or key_clients is not None:
+            # If one is set and not the other, that results in an error
+            if certificate is None:
+                exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_CLIENTS_KEY_KEY + " has been set, but " + \
+                    LB_CLIENTS_KEY_CERTIFICATE + " has not been")
+            if key_clients is None:
+                exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_CLIENTS_KEY_CERTIFICATE + " has been set, but " + \
+                    LB_CLIENTS_KEY_KEY + " has not been")
+            tls_termination = True
 
         # Servers
 
@@ -183,15 +207,18 @@ class Load_balancer(Typed):
             })
 
         self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_LOAD_BALANCERS, {
-            TEMPLATE_KEY_NAME: 					self.name,
-            TEMPLATE_KEY_LB_LAYER: 				layer,
-            TEMPLATE_KEY_LB_ALGORITHM: 			algo,
-            TEMPLATE_KEY_LB_WAIT_QUEUE_LIMIT: 	waitq_limit,
-            TEMPLATE_KEY_LB_SESSION_LIMIT: 		session_limit,
-            TEMPLATE_KEY_PORT: 					port,
-            TEMPLATE_KEY_LB_CLIENTS_IFACE: 		clients_iface_name,
-            TEMPLATE_KEY_LB_SERVERS_IFACE: 		servers_iface_name,
-            TEMPLATE_KEY_LB_POOL: 				pystache_pool
+            TEMPLATE_KEY_NAME:                      self.name,
+            TEMPLATE_KEY_LB_LAYER:                  layer,
+            TEMPLATE_KEY_LB_ALGORITHM:              algo,
+            TEMPLATE_KEY_LB_WAIT_QUEUE_LIMIT:       waitq_limit,
+            TEMPLATE_KEY_LB_SESSION_LIMIT:          session_limit,
+            TEMPLATE_KEY_PORT:                      port,
+            TEMPLATE_KEY_LB_CLIENTS_IFACE:          clients_iface_name,
+            TEMPLATE_KEY_LB_SERVERS_IFACE:          servers_iface_name,
+            TEMPLATE_KEY_LB_POOL:                   pystache_pool,
+            TEMPLATE_KEY_LB_TLS_TERMINATION:        tls_termination,
+            TEMPLATE_KEY_LB_CLIENTS_CERTIFICATE:    certificate,
+            TEMPLATE_KEY_LB_CLIENTS_KEY:            key_clients
         })
 
     # Overriding
@@ -286,7 +313,7 @@ class Load_balancer(Typed):
                 value_ctx = e.ctx.value()
 
             if value_ctx.obj() is None:
-                mandatory_keys = ", ".join(PREDEFINED_LB_CLIENTS_KEYS) if key == LB_KEY_CLIENTS else ", ".join(PREDEFINED_LB_SERVERS_KEYS)
+                mandatory_keys = ", ".join(MANDATORY_LB_CLIENTS_KEYS) if key == LB_KEY_CLIENTS else ", ".join(PREDEFINED_LB_SERVERS_KEYS)
                 exit_NaCl(value_ctx, "Invalid " + key + " value. It needs to be an object containing " + mandatory_keys)
 
             found_element_value = {}
