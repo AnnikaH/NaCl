@@ -80,13 +80,13 @@ void register_plugin_nacl() {
 
 	custom_made_classes_from_nacl::My_Filter my_filter;
 
-	eth1.ip_obj().input_chain().chain.push_back(my_filter);
-
-	eth1.ip_obj().postrouting_chain().chain.push_back(my_filter);
-
 	eth1.ip_obj().prerouting_chain().chain.push_back(my_filter);
 
 	eth1.ip_obj().output_chain().chain.push_back(my_filter);
+
+	eth1.ip_obj().postrouting_chain().chain.push_back(my_filter);
+
+	eth1.ip_obj().input_chain().chain.push_back(my_filter);
 
 	eth0.ip_obj().prerouting_chain().chain.push_back(my_filter);
 
