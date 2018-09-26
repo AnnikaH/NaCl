@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from NaCl import CPP, DOT, TCP, UDP, IP, ICMP, CT
+from NaCl import CPP, DOT, TCP, UDP, IP, ICMP, CT, exit_NaCl
 
 # Constants that need to be available for more than one type_processor
 
@@ -413,12 +413,12 @@ class Tcp:
 
 	def resolve_method_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in TCP")
+			exit_NaCl(ctx, "No property named " + prop + " in TCP")
 		return self.cpp_properties[prop]
 
 	def get_cout_convert_to_type_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in TCP")
+			exit_NaCl(ctx, "No property named " + prop + " in TCP")
 		return TO_UNSIGNED
 
 class Udp:
@@ -450,12 +450,12 @@ class Udp:
 
 	def resolve_method_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in UDP")
+			exit_NaCl(ctx, "No property named " + prop + " in UDP")
 		return self.cpp_properties[prop]
 
 	def get_cout_convert_to_type_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in UDP")
+			exit_NaCl(ctx, "No property named " + prop + " in UDP")
 		return TO_UNSIGNED
 
 class Ip:
@@ -532,7 +532,7 @@ class Ip:
 
 	def resolve_method_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in IP")
+			exit_NaCl(ctx, "No property named " + prop + " in IP")
 		return self.cpp_properties[prop]
 
 	# Returns the correct C++/IncludeOS IP protocol constant based on the
@@ -540,12 +540,12 @@ class Ip:
 	def resolve_protocol_cpp(self, nacl_proto, ctx):
 		proto = nacl_proto.lower()
 		if proto not in self.cpp_protocols:
-			sys.exit("line " + get_line_and_column(ctx) + " No protocol named " + nacl_proto + " exists")
+			exit_NaCl(ctx, "No protocol named " + nacl_proto + " exists")
 		return self.cpp_protocols[proto]
 
 	def get_cout_convert_to_type_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in IP")
+			exit_NaCl(ctx, "No property named " + prop + " in IP")
 		return self.cpp_cout_conversion_types[prop]
 
 class Icmp:
@@ -571,12 +571,12 @@ class Icmp:
 
 	def resolve_method_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in ICMP")
+			exit_NaCl(ctx, "No property named " + prop + " in ICMP")
 		return self.cpp_properties[prop]
 
 	def get_cout_convert_to_type_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in ICMP")
+			exit_NaCl(ctx, "No property named " + prop + " in ICMP")
 		return TO_UNSIGNED
 
 class Ct:
@@ -602,12 +602,12 @@ class Ct:
 
 	def resolve_method_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in CT")
+			exit_NaCl(ctx, "No property named " + prop + " in CT")
 		return self.cpp_properties[prop]
 
 	def get_cout_convert_to_type_cpp(self, prop, ctx):
 		if prop not in self.properties:
-			sys.exit("line " + get_line_and_column(ctx) + " No property named " + prop + " in TCP")
+			exit_NaCl(ctx, "No property named " + prop + " in TCP")
 		return TO_UNSIGNED
 
 Tcp_obj = Tcp()
