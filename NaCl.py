@@ -303,11 +303,11 @@ class Element(object):
 		# In that case: Error (member/key already set)
 		if self.get_dictionary_val(self.members, list(assignment_name_parts), element.ctx) is not None:
 			exit_NaCl(element.ctx, "Member " + element.name + " has already been set")
-		else:
-			# Add to self.members dictionary
-			num_name_parts = len(assignment_name_parts)
-			parent_key = "" if len(assignment_name_parts) < 2 else assignment_name_parts[num_name_parts - 2]
-			self.add_dictionary_val(self.members, assignment_name_parts, element.ctx.value(), num_name_parts, parent_key)
+
+		# Add to self.members dictionary
+		num_name_parts = len(assignment_name_parts)
+		parent_key = "" if len(assignment_name_parts) < 2 else assignment_name_parts[num_name_parts - 2]
+		self.add_dictionary_val(self.members, assignment_name_parts, element.ctx.value(), num_name_parts, parent_key)
 
 	# Called when resolving values
 	def get_member_value(self, key_list, error_ctx):
@@ -365,12 +365,6 @@ class Element(object):
 				# We don't want to modify the input parameter (key_list), therefore key_list[1:] here:
 				return self.add_dictionary_val(dictionary[key], key_list[1:], value, level, level_key)
 
-	# Can be overridden in subclass if it is necessary to exclude some members from being processed
-	# (exclude some members from being recursively visited and added to self.members, f.ex. if
-	# the class/object wants to handle the processing itself)
-	def process_obj_should_end(self, key):
-		return False
-
 	def process_obj(self, dictionary, ctx, level=1, parent_key=""):
 		for pair in ctx.key_value_list().key_value_pair():
 			key = pair.key().getText() # if self.handle_as_untyped else pair.key().getText().lower()
@@ -386,12 +380,6 @@ class Element(object):
 				# Resolve the value
 				self.resolve_dictionary_value(dictionary, key, pair.value())
 			else:
-				# Custom END of recursion if the class/object doesn't want a specific member to be processed automatically
-				# (recursively added to self.members):
-				if self.process_obj_should_end(key):
-					self.resolve_dictionary_value(dictionary, key, pair.value())
-					return
-
 				# Recursion:
 				# Then we have an obj inside an obj
 				dictionary[key] = {} # Creating new dictionary

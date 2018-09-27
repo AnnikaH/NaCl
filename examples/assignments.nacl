@@ -10,8 +10,6 @@ Iface eth0 {
     }
 }
 
-eth0.ip4.vlan: vlan1
-
 eth0.ip4.address: 10.0.0.45
 eth0.ip4.gateway: 10.0.0.1
 eth0.ip4.prerouting: eth0_filter
@@ -44,8 +42,10 @@ my_map.e2: {
     e2-2: 40
 }
 
-vlan1.address: 20.20.20.10
-vlan1.netmask: 255.255.255.0
+vlan1.ip4: {
+    address: 20.20.20.10,
+    netmask: 255.255.255.0
+}
 
 Gateway gw {
     r1: {
@@ -53,8 +53,9 @@ Gateway gw {
     }
 }
 
-Vlan vlan1 {
-    index: 13
+Iface vlan1 {
+	index: 0,
+	vlan: 13
 }
 
 Conntrack my_ct {

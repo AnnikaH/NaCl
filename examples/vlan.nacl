@@ -2,8 +2,7 @@ Iface eth0 {
     ip4: {
         address: 10.0.0.30,
         netmask: 255.255.255.0,
-        gateway: 10.0.0.1,
-        vlan: [ no0, no1 ]
+        gateway: 10.0.0.1
     },
     index: 0
 }
@@ -16,25 +15,12 @@ Iface eth1 {
     },
     index: 1
 }
-eth1.ip4.vlan: [ no2, no3 ]
 
 Iface eth2 {
     ip4: {
         address: 10.10.10.50,
         netmask: 255.255.255.0,
-        gateway: 10.10.10.1,
-        vlan: [
-            {
-                address: 10.100.0.10,
-                netmask: 255.255.255.0,
-                index: 22
-            },
-            {
-                address: 10.100.0.20,
-                netmask: 255.255.255.0,
-                index: 23
-            }
-        ]
+        gateway: 10.10.10.1
     },
     index: 2
 }
@@ -43,19 +29,7 @@ Iface eth3 {
     ip4: {
         address: 10.100.100.100,
         netmask: 255.255.255.0,
-        gateway: 100.100.100.1,
-        vlan: {
-            my_vlan: {
-                address: 10.100.0.10,
-                netmask: 255.255.255.0,
-                index: 22
-            },
-            my_other_vlan: {
-                address: 10.100.0.20,
-                netmask: 255.255.255.0,
-                index: 23
-            }
-        }
+        gateway: 100.100.100.1
     },
     index: 3
 }
@@ -69,39 +43,92 @@ Iface eth4 {
     index: 4
 }
 
-eth4.ip4.vlan: {
-    one: {
-        index: 62,
-        address: 10.200.100.2,
-        netmask: 255.255.255.0
-    },
-    two: {
-        index: 63,
-        address: 10.200.100.3,
+Iface no0 {
+    index: 0,
+    vlan: 5,
+    ip4: {
+        address: 10.50.0.10,
         netmask: 255.255.255.0
     }
 }
 
-Vlan no0 {
-    address: 10.50.0.10,
-    netmask: 255.255.255.0,
-    index: 5
+Iface no1 {
+    index: 0,
+    vlan: 2,
+    ip4: {
+        address: 10.60.0.10,
+        netmask: 255.255.255.0
+    }
 }
 
-Vlan no1 {
-    address: 10.60.0.10,
-    netmask: 255.255.255.0,
-    index: 2
+Iface no2 {
+    index: 1,
+    vlan: 13,
+    ip4: {
+        address: 10.50.0.20,
+        netmask: 255.255.255.0
+    }
 }
 
-Vlan no2 {
-    address: 10.50.0.20,
-    netmask: 255.255.255.0,
-    index: 13
+Iface no3 {
+    index: 1,
+    vlan: 24,
+    ip4: {
+        address: 10.60.0.20,
+        netmask: 255.255.255.0
+    }
 }
 
-Vlan no3 {
-    address: 10.60.0.20,
-    netmask: 255.255.255.0,
-    index: 24
+Iface vlan1_eth2 {
+    index: 2,
+    vlan: 22,
+    ip4: {
+        address: 10.100.0.10,
+        netmask: 255.255.255.0
+    }
+}
+
+Iface vlan2_eth2 {
+    index: 2,
+    vlan: 23,
+    ip4: {
+        address: 10.100.0.20,
+        netmask: 255.255.255.0
+    }
+}
+
+Iface vlan1_eth3 {
+    ip4: {
+        address: 10.100.0.10,
+        netmask: 255.255.255.0
+    },
+    index: 3,
+    vlan: 24
+}
+
+Iface vlan2_eth3 {
+    ip4: {
+        address: 10.100.0.20,
+        netmask: 255.255.255.0
+    },
+    index: 3,
+    vlan: 23
+}
+
+Iface vlan1_eth4 {
+    index: 4,
+    vlan: 62,
+    ip4: {
+        address: 10.200.100.2,
+        netmask: 255.255.255.0
+    }
+}
+
+Iface vlan2_eth4 {
+    index: 4,
+    vlan: 63,
+    ip4: {
+        address: 10.200.100.3,
+        netmask: 255.255.255.0
+    }
 }

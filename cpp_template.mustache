@@ -27,7 +27,8 @@
 #include <net/router.hpp>
 {{/has_gateways}}
 {{#has_vlans}}
-#include <net/vlan>
+#include <net/vlan_manager.hpp>
+#include <hw/devices.hpp>
 {{/has_vlans}}
 {{#has_load_balancers}}
 #include <microLB>
@@ -208,8 +209,22 @@ void register_plugin_nacl() {
 	INFO("NaCl", "Registering NaCl plugin");
 
 	{{#ifaces}}
-	auto& {{name}} = Super_stack::get({{{index}}});
 	{{#ip4}}
+	{{^is_vlan}}
+	auto& {{name}} = Super_stack::get({{{index}}});
+	{{/is_vlan}}
+	{{#is_vlan}}
+	// vlan {{name}}
+	{{#vlan_index_is_mac_string}}
+	int index_{{name}} = hw::Devices::nic_index(MAC::Addr({{{index}}}));
+	Super_stack::inet().create(VLAN_manager::get(index_{{name}}).add(hw::Devices::nic(index_{{name}}), {{{vlan}}}), index_{{name}}, {{{vlan}}});
+	auto& {{name}} = Super_stack::get(index_{{name}}, {{{vlan}}});
+	{{/vlan_index_is_mac_string}}
+	{{^vlan_index_is_mac_string}}
+	Super_stack::inet().create(VLAN_manager::get({{{index}}}).add(hw::Devices::nic({{{index}}}), {{{vlan}}}), {{{index}}}, {{{vlan}}});
+	auto& {{name}} = Super_stack::get({{{index}}}, {{{vlan}}});
+	{{/vlan_index_is_mac_string}}
+	{{/is_vlan}}
 	{{#config_is_static}}
 	{{name}}.network_config({{address}}, {{netmask}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}}{{#dns}}, {{.}}{{/dns}});
 	{{/config_is_static}}
@@ -231,17 +246,13 @@ void register_plugin_nacl() {
 	});
 	{{/config_is_dhcp_fallback}}
 	{{/ip4}}
+	{{#send_queue_limit}}
+	{{name}}.nic().set_sendq_limit({{{send_queue_limit}}});
+	{{/send_queue_limit}}
+	{{#buffer_limit}}
+	{{name}}.nic().set_buffer_limit({{{buffer_limit}}});
+	{{/buffer_limit}}
 	{{/ifaces}}
-	{{#ifaces_with_vlans}}
-
-	// For each iface:
-	auto& {{iface}}_nic = {{iface}}.nic();
-	auto& {{iface}}_manager = VLAN_manager::get({{{iface_index}}});
-	// For each vlan connected to this iface:
-	{{#vlans}}
-	Super_stack::inet().create({{iface}}_manager.add({{iface}}_nic, {{{index}}}), {{{iface_index}}}, {{{index}}}).network_config({{address}}, {{netmask}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}});
-	{{/vlans}}
-	{{/ifaces_with_vlans}}
 	{{#syslogs}}
 
 	// Init syslog over UDP
