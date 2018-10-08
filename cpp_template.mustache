@@ -207,7 +207,6 @@ void register_plugin_nacl() {
 	INFO("NaCl", "Registering NaCl plugin");
 
 	{{#ifaces}}
-	{{#ip4}}
 	{{^is_vlan}}
 	auto& {{name}} = Super_stack::get({{{index}}});
 	{{/is_vlan}}
@@ -223,6 +222,7 @@ void register_plugin_nacl() {
 	auto& {{name}} = Super_stack::get({{{index}}}, {{{vlan}}});
 	{{/vlan_index_is_mac_string}}
 	{{/is_vlan}}
+	{{#ip4}}
 	{{#config_is_static}}
 	{{name}}.network_config({{address}}, {{netmask}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}}{{#dns}}, {{.}}{{/dns}});
 	{{/config_is_static}}
@@ -244,6 +244,9 @@ void register_plugin_nacl() {
 	});
 	{{/config_is_dhcp_fallback}}
 	{{/ip4}}
+	{{#ip6}}
+	{{name}}.network_config6({{address}}, {{prefix}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}});
+	{{/ip6}}
 	{{#send_queue_limit}}
 	{{name}}.nic().set_sendq_limit({{{send_queue_limit}}});
 	{{/send_queue_limit}}
