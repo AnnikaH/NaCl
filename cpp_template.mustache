@@ -224,7 +224,9 @@ void register_plugin_nacl() {
 	{{/is_vlan}}
 	{{#ip4}}
 	{{#config_is_static}}
+	{{#address}}
 	{{name}}.network_config({{address}}, {{netmask}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}}{{#dns}}, {{.}}{{/dns}});
+	{{/address}}
 	{{/config_is_static}}
 	{{#config_is_dhcp}}
 	{{name}}.negotiate_dhcp(10.0, [&{{name}}] (bool timedout) {
@@ -429,7 +431,7 @@ void register_plugin_nacl() {
 		{{/has_lb}}
 		{{#has_stack_sampling}}
 		INFO("NaCl Timer Stack Sampling", "");
-		StackSampler::print(3);
+		StackSampler::print(5);
 		{{/has_stack_sampling}}
 		{{#timer_has_timers}}
 		print_timers_data();
