@@ -4,7 +4,28 @@ grammar NaCl;
 
 Whitespace: (' ' | '\t' | '\n' | '\r') -> channel(1);
 
+/* works for ip6, but not regular nacls (numbers)
+Hexdigit: [0-9A-Fa-f];
+
+/// H16     = 1*Hexdigit
+H16: Hexdigit Hexdigit Hexdigit Hexdigit
+    | Hexdigit Hexdigit Hexdigit
+    | Hexdigit Hexdigit
+    | Hexdigit
+    ;
+*/
+
 fragment Digit: [0-9];
+
+IPv6: [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
+    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
+    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
+    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
+    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
+    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
+    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
+    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9];
+
 Number: Digit+;
 
 // Characters
@@ -51,16 +72,60 @@ Line_comment: 	Line_comment_start ~[\r\n]* -> skip;
 Block_comment: 	Block_comment_start .*? Block_comment_end -> skip;
 
 // NOTE: Identifier has to be at the end - after all the other lexer rules
-Identifier: [a-zA-Z] [a-zA-Z0-9_-]*;	// valid names of variables
+Identifier: [a-zA-Z] [a-zA-Z0-9_-]*;	// valid names of variables and characters in comments
 
 /* Parser */
+
+/*
+ipv6_addr: h16 ':' h16 ':' h16 ':' h16 ':' h16 ':' h16 ':' ls32
+   | '::' h16 ':' h16 ':' h16 ':' h16 ':' h16 ':' ls32
+   | h16? '::' h16 ':' h16 ':' h16 ':' h16 ':' ls32
+   | ((h16 ':')? h16)? '::' h16 ':' h16 ':' h16 ':' ls32
+   | (((h16 ':')? h16 ':')? h16)? '::' h16 ':' h16 ':' ls32
+   | ((((h16 ':')? h16 ':')? h16 ':')? h16)? '::' h16 ':' ls32
+   | (((((h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16)? '::' ls32
+   | ((((((h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16)? '::' h16
+   | (((((((h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16)? '::'
+   ;
+*/
+
+/// ls32    = ( H16 ":" H16 ) / IPv4address
+// LS32: H16 Colon H16;
+//    | ipv4_addr
+//    ;
 
 // ---------- value ----------
 
 value: primitive_type | rng | string | value_name | obj | list_t;
 
+// ipv6_addr: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16;
+/*
+ipv6_addr: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon LS32
+    | Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon LS32
+    | H16? Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon LS32
+    | ((H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon H16 Colon LS32
+    | (((H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon LS32
+    | ((((H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon LS32
+    | (((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon LS32
+    | ((((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16
+    | (((((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon
+    ;
+*/
+/*
+ipv6_addr: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16
+    | Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16
+    | H16? Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16
+    | ((H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon H16
+    | (((H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon H16 Colon H16
+    | ((((H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon H16
+    | (((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon H16
+    | ((((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16
+    | (((((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon
+    ;
+*/
+
 primitive_type: numeric_type | bool_val | ipv4_cidr;
-numeric_type: integer | decimal | ipv4_addr;
+numeric_type: integer | decimal | ipv4_addr | ipv6_addr;
 bool_val: 'true' | 'false';
 ipv4_cidr: ipv4_addr cidr_mask;
 cidr_mask: (Slash integer);
@@ -69,6 +134,7 @@ integer: Number+
 decimal: Number+ Dot Number+
 		| Parenthesis_start Hyphen Number+ Dot Number+ Parenthesis_end;
 ipv4_addr: Number Dot Number Dot Number Dot Number;
+ipv6_addr: IPv6;
 
 rng: numeric_type Hyphen numeric_type;
 string: Quotes (~(Quotes) | '\\n')* Quotes; // Allowed to write \n inside a string

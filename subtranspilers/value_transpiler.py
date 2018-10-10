@@ -286,6 +286,9 @@ class Cpp_value_transpiler(Value_transpiler):
 		if numeric_value.ipv4_addr() is not None:
 			return self.transpile_ip4_addr(numeric_value.ipv4_addr())
 
+		if numeric_value.ipv6_addr() is not None:
+			return self.transpile_ip6_addr(numeric_value.ipv6_addr())
+
 		if numeric_value.integer() is not None or \
 		numeric_value.decimal() is not None:
 			return numeric_value.getText()
@@ -349,6 +352,19 @@ class Cpp_value_transpiler(Value_transpiler):
 			exit_NaCl(val_ctx, "Undefined protocol object properties: " + val_ctx.value_name().getText())
 
 		return proto_objects[name.lower()].get_cout_convert_to_type_cpp(properties[0].lower(), val_ctx)
+
+	def transpile_ip6_addr(self, ip_addr_ctx):
+		parts = ip_addr_ctx.getText().split(":") # list
+		addr_cpp = ""
+		i = 0
+		for p in parts:
+			# add '0x' before each hex/part
+			addr_cpp += "0x" + p
+			# add ',' between the parts
+			if i < (len(parts) - 1):
+				addr_cpp += ", "
+			i += 1
+		return INCLUDEOS_IP6_ADDR_CLASS + "{" + addr_cpp + "}"
 
 	def transpile_ip4_addr(self, ip_addr_ctx):
 		parts = ip_addr_ctx.Number() # list

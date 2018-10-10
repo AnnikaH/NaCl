@@ -121,6 +121,7 @@ INCLUDEOS_REFERENCE_OP = "&"
 # IncludeOS class names
 INCLUDEOS_IP4_ADDR_CLASS = "IP4::addr"
 INCLUDEOS_IP4_CIDR_CLASS = "ip4::Cidr"
+INCLUDEOS_IP6_ADDR_CLASS = "IP6::addr"
 
 # IncludeOS (C++) Filter return values
 INCLUDEOS_VERDICT_TYPE = "Filter_verdict_type::"
