@@ -93,6 +93,11 @@ class Gateway(Typed):
                     "Valid members are: " + ", ".join(PREDEFINED_GATEWAY_ROUTE_KEYS))
 
             if key != GATEWAY_KEY_IFACE:
+                if key == GATEWAY_KEY_NET or key == GATEWAY_KEY_HOST:
+                    # Prohibit IPv6 addresses
+                    if ":" in pair.value().getText():
+                        exit_NaCl(pair.key(), "Invalid character (:) in Gateway route's " + key + " member (can not be an IPv6 addresses)")
+                # Transpile the value
                 route_obj[key] = self.nacl_state.transpile_value(pair.value())
             else:
                 # Then the Iface element's name is to be added to the route_obj,
