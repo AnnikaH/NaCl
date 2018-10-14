@@ -82,10 +82,10 @@ IFACE_KEY_PREFIX = "prefix"
 PREDEFINED_IFACE_IP6_KEYS = [
     IFACE_KEY_ADDRESS,
     IFACE_KEY_PREFIX,
-    IFACE_KEY_GATEWAY
+    IFACE_KEY_GATEWAY,
     # IFACE_KEY_DNS
     # IFACE_KEY_MASQUERADE
-    # IFACE_KEY_CONFIG
+    IFACE_KEY_CONFIG
 ]
 # TODO:
 # PREDEFINED_IFACE_IP6_KEYS.extend(CHAIN_NAMES)
@@ -177,7 +177,7 @@ class Iface(Typed):
         #   - prefix
         # 	- gateway
         # 	- dns
-        # 	- config (?)
+        # 	- config
         # 	- prerouting
         # 	- input
         # 	- output
@@ -243,7 +243,8 @@ class Iface(Typed):
         if key == IFACE_KEY_CONFIG:
             found_element_value = found_element_value.lower()
             # The config value is just resolved to a string ("dhcp", "dhcp-with-fallback" or "static")
-            # Error if ip4.config is set but it has not been resolved to a string or the config value is not a valid config value
+            # Error if ip4.config or ip6.config is set but it has not been resolved to a string or the config value
+            # is not a valid config value
             if found_element_value not in PREDEFINED_CONFIG_TYPES:
                 exit_NaCl(value_ctx, "Invalid config type. Valid values are " + ", ".join(PREDEFINED_CONFIG_TYPES))
         else:
@@ -398,6 +399,10 @@ class Iface(Typed):
 
         # -- ip6 --
 
+        ip6_config_is_static = False
+        ip6_config_is_dhcp = False
+        ip6_config_is_dhcp_fallback = False
+
         ip6 = self.members.get(IFACE_KEY_IP6)
         if ip6 is not None:
             # Error if ip6 is not a dictionary (contains key value pairs)
@@ -406,26 +411,42 @@ class Iface(Typed):
                     ". It needs to be an object containing " + ", ".join(PREDEFINED_IFACE_IP6_KEYS))
 
             # If this is a vlan, require network configuration:
+            config = ip6.get(IFACE_KEY_CONFIG)
             if vlan is not None:
-                # For now ip6 can only have static network configuration
-                if ip6.get(IFACE_KEY_ADDRESS) is None or ip6.get(IFACE_KEY_PREFIX) is None:
-                    exit_NaCl(self.ctx, "The members " + IFACE_KEY_ADDRESS + " and " + IFACE_KEY_PREFIX + " must be set for every Iface's ip6 member")
+                # Validate ip6's config member
+                # config value has previously been resolved to a string (lower case) (in resolve_dictionary_value)
+                if (config is None or config != DHCP_CONFIG) and (ip6.get(IFACE_KEY_ADDRESS) is None or ip6.get(IFACE_KEY_PREFIX) is None):
+                    exit_NaCl(self.ctx, "The members " + IFACE_KEY_ADDRESS + " and " + IFACE_KEY_PREFIX + " must be set for every vlan Iface (ip6 member) if" + \
+                        " the Iface configuration hasn't been set to " + DHCP_CONFIG)
+                elif config is not None and config == DHCP_CONFIG and \
+                    (ip6.get(IFACE_KEY_ADDRESS) is not None or \
+                    ip6.get(IFACE_KEY_PREFIX) is not None or \
+                    ip6.get(IFACE_KEY_GATEWAY) is not None):
+                    exit_NaCl(self.ctx, "An Iface with ip6 config set to " + DHCP_CONFIG + " can not specify " + IFACE_KEY_ADDRESS + \
+                        ", " + IFACE_KEY_PREFIX + " or " + IFACE_KEY_GATEWAY)
 
                 # It is not allowed (yet) to set buffer_limit or send_queue_limit on a vlan
                 if self.members.get(IFACE_KEY_BUFFER_LIMIT) is not None or self.members.get(IFACE_KEY_SEND_QUEUE_LIMIT) is not None:
                     exit_NaCl(self.ctx, "The members send_queue_limit and buffer_limit can not be set on an Iface that is a vlan")
+
+            if config is None or config == STATIC_CONFIG:
+                ip6_config_is_static = True
+            elif config == DHCP_CONFIG:
+                ip6_config_is_dhcp = True
+            else: # config == DHCP_FALLBACK_CONFIG
+                ip6_config_is_dhcp_fallback = True
 
         pystache_ip6 = None
         if ip6 is not None:
             pystache_ip6 = [{
                 TEMPLATE_KEY_ADDRESS:   ip6.get(IFACE_KEY_ADDRESS),
                 TEMPLATE_KEY_PREFIX:    ip6.get(IFACE_KEY_PREFIX),
-                TEMPLATE_KEY_GATEWAY:   ip6.get(IFACE_KEY_GATEWAY)
-                # TEMPLATE_KEY_DNS:       ip6.get(IFACE_KEY_DNS)
+                TEMPLATE_KEY_GATEWAY:   ip6.get(IFACE_KEY_GATEWAY),
+                # TEMPLATE_KEY_DNS:     ip6.get(IFACE_KEY_DNS)
 
-                # TEMPLATE_KEY_CONFIG_IS_STATIC:          ip6_config_is_static,
-                # TEMPLATE_KEY_CONFIG_IS_DHCP:            ip6_config_is_dhcp,
-                # TEMPLATE_KEY_CONFIG_IS_DHCP_FALLBACK:   ip6_config_is_dhcp_fallback
+                TEMPLATE_KEY_CONFIG_IS_STATIC:          ip6_config_is_static,
+                TEMPLATE_KEY_CONFIG_IS_DHCP:            ip6_config_is_dhcp,
+                TEMPLATE_KEY_CONFIG_IS_DHCP_FALLBACK:   ip6_config_is_dhcp_fallback
             }]
 
         # Else we allow an Iface to be configured without network (ip4 and/or ip6)

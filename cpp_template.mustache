@@ -247,7 +247,28 @@ void register_plugin_nacl() {
 	{{/config_is_dhcp_fallback}}
 	{{/ip4}}
 	{{#ip6}}
+	{{#config_is_static}}
+	{{#address}}
 	{{name}}.network_config6({{address}}, {{prefix}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}});
+	{{/address}}
+	{{/config_is_static}}
+	{{#config_is_dhcp}}
+	{{name}}.autoconf_v6(0, [&{{name}}] (bool complete) {
+		if (!complete) {
+			INFO("NaCl plugin interface {{name}}", "SLAAC did not complete (%s). Nothing to do.", {{name}}.ifname().c_str());
+			return;
+		}
+		INFO("NaCl plugin interface {{name}}", "IP address updated: %s", {{name}}.ip6_addr().str().c_str());
+	});
+	{{/config_is_dhcp}}
+	{{#config_is_dhcp_fallback}}
+	{{name}}.autoconf_v6(0, [&{{name}}] (bool complete) {
+		if (!complete) {
+			INFO("NaCl plugin interface {{name}}", "SLAAC did not complete (%s) - falling back to static configuration", {{name}}.ifname().c_str());
+			{{name}}.network_config6({{address}}, {{prefix}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}});
+		}
+	});
+	{{/config_is_dhcp_fallback}}
 	{{/ip6}}
 	{{#send_queue_limit}}
 	{{name}}.nic().set_sendq_limit({{{send_queue_limit}}});
