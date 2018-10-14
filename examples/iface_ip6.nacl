@@ -1,0 +1,35 @@
+Iface eth0 {
+    index: 0,
+    ip4: {
+        address: 10.0.0.45,
+        netmask: 255.255.255.0,
+        gateway: 10.0.0.1
+    },
+    ip6: {
+        address: 1280:FE80:0000:0000:0202:B3FF:FE1E:8328,
+        prefix: 64,
+        gateway: 1280:FE80:0000:0000:0202:B3FF:FE1E:9000
+    }
+}
+
+Iface eth1 {
+    index: 1,
+    ip4: {
+        address: 10.0.0.46,
+        netmask: 255.255.255.0,
+        gateway: 10.0.0.1
+    },
+    ip6: {
+        config: dhcp
+    }
+}
+
+Iface eth2 {
+    index: 2,
+    ip6: {
+        config: dhcp-with-fallback,
+        address: 1280:FE80:0000:0000:0202:B3FF:FE1E:8329,
+        prefix: 64,
+        gateway: 1280:FE80:0000:0000:0202:B3FF:FE1E:9000
+    }
+}
