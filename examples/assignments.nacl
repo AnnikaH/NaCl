@@ -64,7 +64,7 @@ Conntrack my_ct {
 
 limit: 20000
 
-Iface eth1 dhcp
+Iface eth1 auto
 
 Filter::IP another_filter {
     accept

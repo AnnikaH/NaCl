@@ -1,22 +1,22 @@
-Iface something dhcp
+Iface something auto
 something.index: 1
 
 Iface something_else {
     ip4: {
-        config: dhcp
+        config: auto
     },
     index: 2
 }
 
 some_other.ip4.address: 10.0.0.50
-Iface some_other dhcp-with-fallback
+Iface some_other auto-with-fallback
 some_other.ip4.netmask: 255.255.255.0
 some_other.ip4.gateway: 10.0.0.1
 some_other.index: 0
 
 Iface s {
     ip4: {
-        config:     dhcp-with-fallback,
+        config:     auto-with-fallback,
         address:    10.0.0.60,
         netmask:    255.255.255.0,
         gateway:    10.0.0.1

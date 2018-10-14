@@ -92,13 +92,13 @@ PREDEFINED_IFACE_IP6_KEYS = [
 
 # config values
 
-DHCP_CONFIG             = "dhcp"
-DHCP_FALLBACK_CONFIG    = "dhcp-with-fallback"
+AUTO_CONFIG             = "auto"
+AUTO_FALLBACK_CONFIG    = "auto-with-fallback"
 STATIC_CONFIG           = "static"
 
 PREDEFINED_CONFIG_TYPES = [
-    DHCP_CONFIG,
-    DHCP_FALLBACK_CONFIG,
+    AUTO_CONFIG,
+    AUTO_FALLBACK_CONFIG,
     STATIC_CONFIG
 ]
 
@@ -124,8 +124,8 @@ TEMPLATE_KEY_VLAN                       = "vlan"
 TEMPLATE_KEY_SEND_QUEUE_LIMIT           = "send_queue_limit"
 TEMPLATE_KEY_BUFFER_LIMIT               = "buffer_limit"
 
-TEMPLATE_KEY_CONFIG_IS_DHCP             = "config_is_dhcp"
-TEMPLATE_KEY_CONFIG_IS_DHCP_FALLBACK    = "config_is_dhcp_fallback"
+TEMPLATE_KEY_CONFIG_IS_AUTO             = "config_is_auto"
+TEMPLATE_KEY_CONFIG_IS_AUTO_FALLBACK    = "config_is_auto_fallback"
 TEMPLATE_KEY_CONFIG_IS_STATIC           = "config_is_static"
 
 TEMPLATE_KEY_ADDRESS                    = "address"
@@ -242,7 +242,7 @@ class Iface(Typed):
         found_element_value = value_ctx.getText()
         if key == IFACE_KEY_CONFIG:
             found_element_value = found_element_value.lower()
-            # The config value is just resolved to a string ("dhcp", "dhcp-with-fallback" or "static")
+            # The config value is just resolved to a string ("auto", "auto-with-fallback" or "static")
             # Error if ip4.config or ip6.config is set but it has not been resolved to a string or the config value
             # is not a valid config value
             if found_element_value not in PREDEFINED_CONFIG_TYPES:
@@ -347,8 +347,8 @@ class Iface(Typed):
         # -- ip4 --
 
         ip4_config_is_static = False
-        ip4_config_is_dhcp = False
-        ip4_config_is_dhcp_fallback = False
+        ip4_config_is_auto = False
+        ip4_config_is_auto_fallback = False
 
         ip4 = self.members.get(IFACE_KEY_IP4)
         if ip4 is not None:
@@ -362,15 +362,15 @@ class Iface(Typed):
             if vlan is not None:
                 # Validate ip4's config member
                 # config value has previously been resolved to a string (lower case) (in resolve_dictionary_value)
-                if (config is None or config != DHCP_CONFIG) and (ip4.get(IFACE_KEY_ADDRESS) is None or ip4.get(IFACE_KEY_NETMASK) is None):
+                if (config is None or config != AUTO_CONFIG) and (ip4.get(IFACE_KEY_ADDRESS) is None or ip4.get(IFACE_KEY_NETMASK) is None):
                     exit_NaCl(self.ctx, "The members " + IFACE_KEY_ADDRESS + " and " + IFACE_KEY_NETMASK + " must be set for every vlan Iface (ip4 member) if" + \
-                        " the Iface configuration hasn't been set to " + DHCP_CONFIG)
-                elif config is not None and config == DHCP_CONFIG and \
+                        " the Iface configuration hasn't been set to " + AUTO_CONFIG)
+                elif config is not None and config == AUTO_CONFIG and \
                     (ip4.get(IFACE_KEY_ADDRESS) is not None or \
                     ip4.get(IFACE_KEY_NETMASK) is not None or \
                     ip4.get(IFACE_KEY_GATEWAY) is not None or \
                     ip4.get(IFACE_KEY_DNS) is not None):
-                    exit_NaCl(self.ctx, "An Iface with ip4 config set to " + DHCP_CONFIG + " can not specify " + IFACE_KEY_ADDRESS + \
+                    exit_NaCl(self.ctx, "An Iface with ip4 config set to " + AUTO_CONFIG + " can not specify " + IFACE_KEY_ADDRESS + \
                         ", " + IFACE_KEY_NETMASK + ", " + IFACE_KEY_GATEWAY + " or " + IFACE_KEY_DNS)
 
                 # It is not allowed (yet) to set buffer_limit or send_queue_limit on a vlan
@@ -379,10 +379,10 @@ class Iface(Typed):
 
             if config is None or config == STATIC_CONFIG:
                 ip4_config_is_static = True
-            elif config == DHCP_CONFIG:
-                ip4_config_is_dhcp = True
-            else: # config == DHCP_FALLBACK_CONFIG
-                ip4_config_is_dhcp_fallback = True
+            elif config == AUTO_CONFIG:
+                ip4_config_is_auto = True
+            else: # config == AUTO_FALLBACK_CONFIG
+                ip4_config_is_auto_fallback = True
 
         pystache_ip4 = None
         if ip4 is not None:
@@ -393,15 +393,15 @@ class Iface(Typed):
                 TEMPLATE_KEY_DNS:       ip4.get(IFACE_KEY_DNS),
 
                 TEMPLATE_KEY_CONFIG_IS_STATIC:          ip4_config_is_static,
-                TEMPLATE_KEY_CONFIG_IS_DHCP:            ip4_config_is_dhcp,
-                TEMPLATE_KEY_CONFIG_IS_DHCP_FALLBACK:   ip4_config_is_dhcp_fallback
+                TEMPLATE_KEY_CONFIG_IS_AUTO:            ip4_config_is_auto,
+                TEMPLATE_KEY_CONFIG_IS_AUTO_FALLBACK:   ip4_config_is_auto_fallback
             }]
 
         # -- ip6 --
 
         ip6_config_is_static = False
-        ip6_config_is_dhcp = False
-        ip6_config_is_dhcp_fallback = False
+        ip6_config_is_auto = False
+        ip6_config_is_auto_fallback = False
 
         ip6 = self.members.get(IFACE_KEY_IP6)
         if ip6 is not None:
@@ -415,14 +415,14 @@ class Iface(Typed):
             if vlan is not None:
                 # Validate ip6's config member
                 # config value has previously been resolved to a string (lower case) (in resolve_dictionary_value)
-                if (config is None or config != DHCP_CONFIG) and (ip6.get(IFACE_KEY_ADDRESS) is None or ip6.get(IFACE_KEY_PREFIX) is None):
+                if (config is None or config != AUTO_CONFIG) and (ip6.get(IFACE_KEY_ADDRESS) is None or ip6.get(IFACE_KEY_PREFIX) is None):
                     exit_NaCl(self.ctx, "The members " + IFACE_KEY_ADDRESS + " and " + IFACE_KEY_PREFIX + " must be set for every vlan Iface (ip6 member) if" + \
-                        " the Iface configuration hasn't been set to " + DHCP_CONFIG)
-                elif config is not None and config == DHCP_CONFIG and \
+                        " the Iface configuration hasn't been set to " + AUTO_CONFIG)
+                elif config is not None and config == AUTO_CONFIG and \
                     (ip6.get(IFACE_KEY_ADDRESS) is not None or \
                     ip6.get(IFACE_KEY_PREFIX) is not None or \
                     ip6.get(IFACE_KEY_GATEWAY) is not None):
-                    exit_NaCl(self.ctx, "An Iface with ip6 config set to " + DHCP_CONFIG + " can not specify " + IFACE_KEY_ADDRESS + \
+                    exit_NaCl(self.ctx, "An Iface with ip6 config set to " + AUTO_CONFIG + " can not specify " + IFACE_KEY_ADDRESS + \
                         ", " + IFACE_KEY_PREFIX + " or " + IFACE_KEY_GATEWAY)
 
                 # It is not allowed (yet) to set buffer_limit or send_queue_limit on a vlan
@@ -431,10 +431,10 @@ class Iface(Typed):
 
             if config is None or config == STATIC_CONFIG:
                 ip6_config_is_static = True
-            elif config == DHCP_CONFIG:
-                ip6_config_is_dhcp = True
-            else: # config == DHCP_FALLBACK_CONFIG
-                ip6_config_is_dhcp_fallback = True
+            elif config == AUTO_CONFIG:
+                ip6_config_is_auto = True
+            else: # config == AUTO_FALLBACK_CONFIG
+                ip6_config_is_auto_fallback = True
 
         pystache_ip6 = None
         if ip6 is not None:
@@ -445,8 +445,8 @@ class Iface(Typed):
                 # TEMPLATE_KEY_DNS:     ip6.get(IFACE_KEY_DNS)
 
                 TEMPLATE_KEY_CONFIG_IS_STATIC:          ip6_config_is_static,
-                TEMPLATE_KEY_CONFIG_IS_DHCP:            ip6_config_is_dhcp,
-                TEMPLATE_KEY_CONFIG_IS_DHCP_FALLBACK:   ip6_config_is_dhcp_fallback
+                TEMPLATE_KEY_CONFIG_IS_AUTO:            ip6_config_is_auto,
+                TEMPLATE_KEY_CONFIG_IS_AUTO_FALLBACK:   ip6_config_is_auto_fallback
             }]
 
         # Else we allow an Iface to be configured without network (ip4 and/or ip6)
@@ -500,14 +500,14 @@ class Iface(Typed):
                     })
                     return # Only one entry in enable_ct_ifaces list for each Iface
 
-    # This method is overridden because an Iface can be created with only one value: 'Iface eth0 dhcp'
-    # The default is that self.ctx is an obj() (object), but in an Iface it can also be a value_name() (dhcp)
+    # This method is overridden because an Iface can be created with only one value: 'Iface eth0 auto'
+    # The default is that self.ctx is an obj() (object), but in an Iface it can also be a value_name() (auto)
     # Overriding
     def process_ctx(self):
         value_ctx = self.ctx.value() if hasattr(self.ctx, 'value') else self.ctx
 
         if value_ctx.value_name() is not None:
-            # configuration type (dhcp, dhcp-with-fallback, static)
+            # configuration type (auto, auto-with-fallback, static)
             config = value_ctx.value_name().getText().lower()
             if config in PREDEFINED_CONFIG_TYPES:
                 self.members[IFACE_KEY_IP4] = {

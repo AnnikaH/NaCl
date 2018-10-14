@@ -20,14 +20,14 @@ Iface eth1 {
         gateway: 10.0.0.1
     },
     ip6: {
-        config: dhcp
+        config: auto
     }
 }
 
 Iface eth2 {
     index: 2,
     ip6: {
-        config: dhcp-with-fallback,
+        config: auto-with-fallback,
         address: 1280:FE80:0000:0000:0202:B3FF:FE1E:8329,
         prefix: 64,
         gateway: 1280:FE80:0000:0000:0202:B3FF:FE1E:9000

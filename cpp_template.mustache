@@ -228,7 +228,7 @@ void register_plugin_nacl() {
 	{{name}}.network_config({{address}}, {{netmask}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}}{{#dns}}, {{.}}{{/dns}});
 	{{/address}}
 	{{/config_is_static}}
-	{{#config_is_dhcp}}
+	{{#config_is_auto}}
 	{{name}}.negotiate_dhcp(10.0, [&{{name}}] (bool timedout) {
 		if (timedout) {
 			INFO("NaCl plugin interface {{name}}", "DHCP request timed out. Nothing to do.");
@@ -236,15 +236,15 @@ void register_plugin_nacl() {
 		}
 		INFO("NaCl plugin interface {{name}}", "IP address updated: %s", {{name}}.ip_addr().str().c_str());
 	});
-	{{/config_is_dhcp}}
-	{{#config_is_dhcp_fallback}}
+	{{/config_is_auto}}
+	{{#config_is_auto_fallback}}
 	{{name}}.negotiate_dhcp(10.0, [&{{name}}] (bool timedout) {
 		if (timedout) {
 			INFO("NaCl plugin interface {{name}}", "DHCP timeout (%s) - falling back to static configuration", {{name}}.ifname().c_str());
 			{{name}}.network_config({{address}}, {{netmask}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}}{{#dns}}, {{.}}{{/dns}});
 		}
 	});
-	{{/config_is_dhcp_fallback}}
+	{{/config_is_auto_fallback}}
 	{{/ip4}}
 	{{#ip6}}
 	{{#config_is_static}}
@@ -252,7 +252,7 @@ void register_plugin_nacl() {
 	{{name}}.network_config6({{address}}, {{prefix}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}});
 	{{/address}}
 	{{/config_is_static}}
-	{{#config_is_dhcp}}
+	{{#config_is_auto}}
 	{{name}}.autoconf_v6(0, [&{{name}}] (bool complete) {
 		if (!complete) {
 			INFO("NaCl plugin interface {{name}}", "SLAAC did not complete (%s). Nothing to do.", {{name}}.ifname().c_str());
@@ -260,15 +260,15 @@ void register_plugin_nacl() {
 		}
 		INFO("NaCl plugin interface {{name}}", "IP address updated: %s", {{name}}.ip6_addr().str().c_str());
 	});
-	{{/config_is_dhcp}}
-	{{#config_is_dhcp_fallback}}
+	{{/config_is_auto}}
+	{{#config_is_auto_fallback}}
 	{{name}}.autoconf_v6(0, [&{{name}}] (bool complete) {
 		if (!complete) {
 			INFO("NaCl plugin interface {{name}}", "SLAAC did not complete (%s) - falling back to static configuration", {{name}}.ifname().c_str());
 			{{name}}.network_config6({{address}}, {{prefix}}{{#gateway}}, {{.}}{{/gateway}}{{^gateway}}, 0{{/gateway}});
 		}
 	});
-	{{/config_is_dhcp_fallback}}
+	{{/config_is_auto_fallback}}
 	{{/ip6}}
 	{{#send_queue_limit}}
 	{{name}}.nic().set_sendq_limit({{{send_queue_limit}}});

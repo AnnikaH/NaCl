@@ -16,7 +16,7 @@ Iface eth0 {
 Iface eth1 {
     index: 1,
     ip4: {
-        config: dhcp-with-fallback
+        config: auto-with-fallback
     }
 }
 
