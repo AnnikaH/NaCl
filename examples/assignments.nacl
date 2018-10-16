@@ -54,8 +54,8 @@ Gateway gw {
 }
 
 Iface vlan1 {
-	index: 0,
-	vlan: 13
+    index: 0,
+    vlan: 13
 }
 
 Conntrack my_ct {
