@@ -330,6 +330,8 @@ class Gateway(Typed):
 
         self.add_gateway(routes)
 
+    # add_gateway adds the gateway object to the nacl_state's pystache data,
+    # which makes it available in the mustache file
     def add_gateway(self, routes):
         send_time_exceeded = ""
         resolved_value = self.not_route_members.get(GATEWAY_KEY_SEND_TIME_EXCEEDED)

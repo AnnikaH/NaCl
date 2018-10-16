@@ -122,105 +122,6 @@ class Load_balancer(Typed):
     def __init__(self, nacl_state, idx, name, ctx, base_type, type_t):
         super(Load_balancer, self).__init__(nacl_state, idx, name, ctx, base_type, type_t)
 
-    def add_load_balancer(self):
-        # Note: This method also validates that all the mandatory fields have been set
-        # Note: The value has already been validated in process_ctx and process_assignments
-        # Note: Only allowed to create one Load_balancer per layer
-
-        layer = self.members.get(LB_KEY_LAYER)
-
-        if layer is None:
-            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_LAYER + " has not been set")
-
-        if self.nacl_state.exists_in_pystache_list(TEMPLATE_KEY_LOAD_BALANCERS, TEMPLATE_KEY_LB_LAYER, layer):
-            exit_NaCl(self.ctx, "A " + layer.upper() + " Load_balancer has already been defined")
-
-        clients = self.members.get(LB_KEY_CLIENTS)
-        if clients is None:
-            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + " has not been set")
-        if not isinstance(clients, dict):
-            exit_NaCl(self.ctx, "Invalid value of " + self.get_class_name() + " member " + LB_KEY_CLIENTS + \
-                ". It needs to be an object containing " + ", ".join(PREDEFINED_LB_CLIENTS_KEYS))
-
-        servers = self.members.get(LB_KEY_SERVERS)
-        if servers is None:
-            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_SERVERS + " has not been set")
-        if not isinstance(servers, dict):
-            exit_NaCl(self.ctx, "Invalid value of " + self.get_class_name() + " member " + LB_KEY_SERVERS + \
-                ". It needs to be an object containing " + ", ".join(PREDEFINED_LB_SERVERS_KEYS))
-
-        # Clients
-
-        clients_iface_name = clients.get(LB_KEY_IFACE)
-        if clients_iface_name is None:
-            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_KEY_IFACE + " has not been set")
-
-        port = clients.get(LB_KEY_PORT)
-        if port is None:
-            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_KEY_PORT + " has not been set")
-
-        waitq_limit = clients.get(LB_CLIENTS_KEY_WAIT_QUEUE_LIMIT)
-        if waitq_limit is None:
-            waitq_limit = 1000
-
-        session_limit = clients.get(LB_CLIENTS_KEY_SESSION_LIMIT)
-        if session_limit is None:
-            session_limit = 1000
-
-        tls_termination = False
-        certificate = clients.get(LB_CLIENTS_KEY_CERTIFICATE)
-        key_clients = clients.get(LB_CLIENTS_KEY_KEY)
-        if certificate is not None or key_clients is not None:
-            # If one is set and not the other, that results in an error
-            if certificate is None:
-                exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_CLIENTS_KEY_KEY + " has been set, but " + \
-                    LB_CLIENTS_KEY_CERTIFICATE + " has not been")
-            if key_clients is None:
-                exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_CLIENTS_KEY_CERTIFICATE + " has been set, but " + \
-                    LB_CLIENTS_KEY_KEY + " has not been")
-            tls_termination = True
-
-        # Servers
-
-        servers_iface_name = servers.get(LB_KEY_IFACE)
-        if servers_iface_name is None:
-            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + "." + LB_KEY_IFACE + " has not been set")
-
-        algo = servers.get(LB_SERVERS_KEY_ALGORITHM)
-        if algo is None:
-            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_ALGORITHM + " has not been set")
-
-        # pool is a list of nodes/servers, containing address and port
-        pool = servers.get(LB_SERVERS_KEY_POOL)
-        if pool is None:
-            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_POOL + " has not been set")
-        if not isinstance(pool, list):
-            exit_NaCl(self.ctx, "Invalid value of Load_balancer member " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_POOL + \
-                ". It needs to be a list of objects containing " + ", ".join(PREDEFINED_LB_NODE_KEYS))
-
-        pystache_pool = []
-        for s in pool:
-            pystache_pool.append({
-                TEMPLATE_KEY_INDEX: 			s.get(TEMPLATE_KEY_INDEX),
-                TEMPLATE_KEY_LB_NODE_ADDRESS: 	s.get(LB_NODE_KEY_ADDRESS),
-                TEMPLATE_KEY_LB_NODE_PORT: 		s.get(LB_KEY_PORT)
-            })
-
-        self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_LOAD_BALANCERS, {
-            TEMPLATE_KEY_NAME:                      self.name,
-            TEMPLATE_KEY_LB_LAYER:                  layer,
-            TEMPLATE_KEY_LB_ALGORITHM:              algo,
-            TEMPLATE_KEY_LB_WAIT_QUEUE_LIMIT:       waitq_limit,
-            TEMPLATE_KEY_LB_SESSION_LIMIT:          session_limit,
-            TEMPLATE_KEY_PORT:                      port,
-            TEMPLATE_KEY_LB_CLIENTS_IFACE:          clients_iface_name,
-            TEMPLATE_KEY_LB_SERVERS_IFACE:          servers_iface_name,
-            TEMPLATE_KEY_LB_POOL:                   pystache_pool,
-            TEMPLATE_KEY_LB_TLS_TERMINATION:        tls_termination,
-            TEMPLATE_KEY_LB_CLIENTS_CERTIFICATE:    certificate,
-            TEMPLATE_KEY_LB_CLIENTS_KEY:            key_clients
-        })
-
     # Overriding
     def validate_dictionary_key(self, key, parent_key, level, value_ctx):
         if level == 1:
@@ -328,6 +229,107 @@ class Load_balancer(Typed):
 
         # Add found value
         dictionary[key] = found_element_value
+
+    # add_load_balancer adds the load_balancer object to the nacl_state's pystache data,
+    # which makes it available in the mustache file
+    def add_load_balancer(self):
+        # Note: This method also validates that all the mandatory fields have been set
+        # Note: The value has already been validated in process_ctx and process_assignments
+        # Note: Only allowed to create one Load_balancer per layer
+
+        layer = self.members.get(LB_KEY_LAYER)
+
+        if layer is None:
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_LAYER + " has not been set")
+
+        if self.nacl_state.exists_in_pystache_list(TEMPLATE_KEY_LOAD_BALANCERS, TEMPLATE_KEY_LB_LAYER, layer):
+            exit_NaCl(self.ctx, "A " + layer.upper() + " Load_balancer has already been defined")
+
+        clients = self.members.get(LB_KEY_CLIENTS)
+        if clients is None:
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + " has not been set")
+        if not isinstance(clients, dict):
+            exit_NaCl(self.ctx, "Invalid value of " + self.get_class_name() + " member " + LB_KEY_CLIENTS + \
+                ". It needs to be an object containing " + ", ".join(PREDEFINED_LB_CLIENTS_KEYS))
+
+        servers = self.members.get(LB_KEY_SERVERS)
+        if servers is None:
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_SERVERS + " has not been set")
+        if not isinstance(servers, dict):
+            exit_NaCl(self.ctx, "Invalid value of " + self.get_class_name() + " member " + LB_KEY_SERVERS + \
+                ". It needs to be an object containing " + ", ".join(PREDEFINED_LB_SERVERS_KEYS))
+
+        # Clients
+
+        clients_iface_name = clients.get(LB_KEY_IFACE)
+        if clients_iface_name is None:
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_KEY_IFACE + " has not been set")
+
+        port = clients.get(LB_KEY_PORT)
+        if port is None:
+            exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_KEY_PORT + " has not been set")
+
+        waitq_limit = clients.get(LB_CLIENTS_KEY_WAIT_QUEUE_LIMIT)
+        if waitq_limit is None:
+            waitq_limit = 1000
+
+        session_limit = clients.get(LB_CLIENTS_KEY_SESSION_LIMIT)
+        if session_limit is None:
+            session_limit = 1000
+
+        tls_termination = False
+        certificate = clients.get(LB_CLIENTS_KEY_CERTIFICATE)
+        key_clients = clients.get(LB_CLIENTS_KEY_KEY)
+        if certificate is not None or key_clients is not None:
+            # If one is set and not the other, that results in an error
+            if certificate is None:
+                exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_CLIENTS_KEY_KEY + " has been set, but " + \
+                    LB_CLIENTS_KEY_CERTIFICATE + " has not been")
+            if key_clients is None:
+                exit_NaCl(self.ctx, self.get_class_name() + " member " + LB_KEY_CLIENTS + "." + LB_CLIENTS_KEY_CERTIFICATE + " has been set, but " + \
+                    LB_CLIENTS_KEY_KEY + " has not been")
+            tls_termination = True
+
+        # Servers
+
+        servers_iface_name = servers.get(LB_KEY_IFACE)
+        if servers_iface_name is None:
+            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + "." + LB_KEY_IFACE + " has not been set")
+
+        algo = servers.get(LB_SERVERS_KEY_ALGORITHM)
+        if algo is None:
+            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_ALGORITHM + " has not been set")
+
+        # pool is a list of nodes/servers, containing address and port
+        pool = servers.get(LB_SERVERS_KEY_POOL)
+        if pool is None:
+            exit_NaCl(self.ctx, "Load_balancer member " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_POOL + " has not been set")
+        if not isinstance(pool, list):
+            exit_NaCl(self.ctx, "Invalid value of Load_balancer member " + LB_KEY_SERVERS + "." + LB_SERVERS_KEY_POOL + \
+                ". It needs to be a list of objects containing " + ", ".join(PREDEFINED_LB_NODE_KEYS))
+
+        pystache_pool = []
+        for s in pool:
+            pystache_pool.append({
+                TEMPLATE_KEY_INDEX: 			s.get(TEMPLATE_KEY_INDEX),
+                TEMPLATE_KEY_LB_NODE_ADDRESS: 	s.get(LB_NODE_KEY_ADDRESS),
+                TEMPLATE_KEY_LB_NODE_PORT: 		s.get(LB_KEY_PORT)
+            })
+
+        self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_LOAD_BALANCERS, {
+            TEMPLATE_KEY_NAME:                      self.name,
+            TEMPLATE_KEY_LB_LAYER:                  layer,
+            TEMPLATE_KEY_LB_ALGORITHM:              algo,
+            TEMPLATE_KEY_LB_WAIT_QUEUE_LIMIT:       waitq_limit,
+            TEMPLATE_KEY_LB_SESSION_LIMIT:          session_limit,
+            TEMPLATE_KEY_PORT:                      port,
+            TEMPLATE_KEY_LB_CLIENTS_IFACE:          clients_iface_name,
+            TEMPLATE_KEY_LB_SERVERS_IFACE:          servers_iface_name,
+            TEMPLATE_KEY_LB_POOL:                   pystache_pool,
+            TEMPLATE_KEY_LB_TLS_TERMINATION:        tls_termination,
+            TEMPLATE_KEY_LB_CLIENTS_CERTIFICATE:    certificate,
+            TEMPLATE_KEY_LB_CLIENTS_KEY:            key_clients
+        })
 
     # Main processing method
     def process(self):

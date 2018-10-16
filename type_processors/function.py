@@ -52,6 +52,8 @@ class Function(Element):
     def transpile_function(self):
         return self.nacl_state.subtranspilers[FUNCTION_TRANSPILER].transpile(self.type_t, self.subtype, self.ctx)
 
+    # add_function adds the function object to the nacl_state's pystache data,
+    # which makes it available in the mustache file
     def add_function(self):
         # Only if a function is mentioned in an assignment that is a push or
         # an Iface's chain, should it be added to filters/nats/rewrites pystache list

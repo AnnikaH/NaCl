@@ -392,6 +392,8 @@ class Iface(Typed):
 
         return [ pystache_ip_obj ]
 
+    # add_iface adds the iface object to the nacl_state's pystache data,
+    # which makes it available in the mustache file
     def add_iface(self):
         # This method should also validate the Iface object, f.ex. that every mandatory field is set
 

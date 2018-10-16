@@ -77,39 +77,6 @@ class Timer(Typed):
     def __init__(self, nacl_state, idx, name, ctx, base_type, type_t):
         super(Timer, self).__init__(nacl_state, idx, name, ctx, base_type, type_t)
 
-    def add_timer(self):
-        pystache_obj = {
-            TEMPLATE_KEY_INTERVAL: self.members.get(TIMER_KEY_INTERVAL)
-        }
-
-        data = self.members.get(TIMER_KEY_DATA)
-        if not isinstance(data, list):
-            exit_NaCl(self.ctx, "Invalid value of Timer member " + TIMER_KEY_DATA + \
-                ". It needs to be a list containing one or more of these values: " + ", ".join(VALID_TIMER_DATA))
-
-        for val in data:
-            if val == TIMER_DATA_VALUE_TIMESTAMP:
-                pystache_obj[TEMPLATE_KEY_HAS_TIMESTAMP] = True
-            elif val == TIMER_DATA_VALUE_STATS:
-                pystache_obj[TEMPLATE_KEY_HAS_STATS] = True
-            elif val == TIMER_DATA_VALUE_MEMORY:
-                pystache_obj[TEMPLATE_KEY_HAS_MEMORY] = True
-            elif val == TIMER_DATA_VALUE_CPU:
-                pystache_obj[TEMPLATE_KEY_HAS_CPU] = True
-            # elif val == TIMER_DATA_VALUE_STORAGE:
-            #    pystache_obj[TEMPLATE_KEY_HAS_STORAGE] = True
-            elif val == TIMER_DATA_VALUE_LB:
-                pystache_obj[TEMPLATE_KEY_HAS_LB] = True
-            elif val == TIMER_DATA_VALUE_STACK_SAMPLING:
-                pystache_obj[TEMPLATE_KEY_HAS_STACK_SAMPLING] = True
-            elif val == TIMER_DATA_VALUE_TIMERS:
-                pystache_obj[TEMPLATE_KEY_TIMER_HAS_TIMERS] = True
-            else:
-                exit_NaCl(self.ctx, "Invalid value of Timer member " + TIMER_KEY_DATA + \
-                    ". Valid values are: " + ", ".join(VALID_TIMER_DATA))
-
-        self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_TIMERS, pystache_obj)
-
     # Overriding
     def validate_dictionary_key(self, key, parent_key, level, value_ctx):
         class_name = self.get_class_name()
@@ -159,6 +126,41 @@ class Timer(Typed):
 
             # Add found value
             dictionary[key_lower] = data
+
+    # add_timer adds the timer object to the nacl_state's pystache data,
+    # which makes it available in the mustache file
+    def add_timer(self):
+        pystache_obj = {
+            TEMPLATE_KEY_INTERVAL: self.members.get(TIMER_KEY_INTERVAL)
+        }
+
+        data = self.members.get(TIMER_KEY_DATA)
+        if not isinstance(data, list):
+            exit_NaCl(self.ctx, "Invalid value of Timer member " + TIMER_KEY_DATA + \
+                ". It needs to be a list containing one or more of these values: " + ", ".join(VALID_TIMER_DATA))
+
+        for val in data:
+            if val == TIMER_DATA_VALUE_TIMESTAMP:
+                pystache_obj[TEMPLATE_KEY_HAS_TIMESTAMP] = True
+            elif val == TIMER_DATA_VALUE_STATS:
+                pystache_obj[TEMPLATE_KEY_HAS_STATS] = True
+            elif val == TIMER_DATA_VALUE_MEMORY:
+                pystache_obj[TEMPLATE_KEY_HAS_MEMORY] = True
+            elif val == TIMER_DATA_VALUE_CPU:
+                pystache_obj[TEMPLATE_KEY_HAS_CPU] = True
+            # elif val == TIMER_DATA_VALUE_STORAGE:
+            #    pystache_obj[TEMPLATE_KEY_HAS_STORAGE] = True
+            elif val == TIMER_DATA_VALUE_LB:
+                pystache_obj[TEMPLATE_KEY_HAS_LB] = True
+            elif val == TIMER_DATA_VALUE_STACK_SAMPLING:
+                pystache_obj[TEMPLATE_KEY_HAS_STACK_SAMPLING] = True
+            elif val == TIMER_DATA_VALUE_TIMERS:
+                pystache_obj[TEMPLATE_KEY_TIMER_HAS_TIMERS] = True
+            else:
+                exit_NaCl(self.ctx, "Invalid value of Timer member " + TIMER_KEY_DATA + \
+                    ". Valid values are: " + ", ".join(VALID_TIMER_DATA))
+
+        self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_TIMERS, pystache_obj)
 
     # Main processing method
     def process(self):
