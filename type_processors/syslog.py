@@ -18,6 +18,7 @@ from __future__ import absolute_import
 # To avoid: <...>/NaCl/type_processors/syslog.py:1: RuntimeWarning: Parent module '<...>/NaCl/type_processors' not found while handling absolute import
 
 from NaCl import exit_NaCl, Typed
+from shared import INCLUDEOS_IP4_ADDR_CLASS
 
 # -------------------- CONSTANTS Syslog --------------------
 
@@ -69,6 +70,26 @@ class Syslog(Typed):
     def __init__(self, nacl_state, idx, name, ctx, base_type, type_t):
         super(Syslog, self).__init__(nacl_state, idx, name, ctx, base_type, type_t)
 
+    # Overriding
+    def validate_dictionary_key(self, key, parent_key, level, value_ctx):
+        if level == 1:
+            if key not in PREDEFINED_SYSLOG_KEYS:
+                exit_NaCl(value_ctx, "Invalid Syslog member " + key)
+        else:
+            exit_NaCl(value_ctx, "Invalid Syslog member " + key)
+
+    # Overriding
+    def resolve_dictionary_value(self, dictionary, key, value):
+        transpiled_value = self.nacl_state.transpile_value(value)
+
+        # Make sure the address is an IPv4 address (IPv6 is not yet supported)
+        if key == SYSLOG_KEY_ADDRESS and INCLUDEOS_IP4_ADDR_CLASS not in transpiled_value:
+            exit_NaCl(value, "The " + TYPE_SYSLOG + " " + SYSLOG_KEY_ADDRESS + " must be an IPv4 address")
+
+        dictionary[key] = transpiled_value
+
+    # add_syslog adds the syslog object to the nacl_state's pystache data,
+    # which makes it available in the mustache file
     def add_syslog(self):
         addr = self.members.get(SYSLOG_KEY_ADDRESS)
         port = self.members.get(SYSLOG_KEY_PORT)
@@ -80,18 +101,6 @@ class Syslog(Typed):
             TEMPLATE_KEY_ADDRESS: addr,
             TEMPLATE_KEY_PORT: port
         })
-
-    # Overriding
-    def validate_dictionary_key(self, key, parent_key, level, value_ctx):
-        if level == 1:
-            if key not in PREDEFINED_SYSLOG_KEYS:
-                exit_NaCl(value_ctx, "Invalid Syslog member " + key)
-        else:
-            exit_NaCl(value_ctx, "Invalid Syslog member " + key)
-
-    # Overriding
-    def resolve_dictionary_value(self, dictionary, key, value):
-        dictionary[key] = self.nacl_state.transpile_value(value)
 
     # Main processing method
     def process(self):
