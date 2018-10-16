@@ -65,6 +65,36 @@ class Conntrack(Typed):
 	def __init__(self, nacl_state, idx, name, ctx, base_type, type_t):
 		super(Conntrack, self).__init__(nacl_state, idx, name, ctx, base_type, type_t)
 
+	# Overriding
+	def validate_dictionary_key(self, key, parent_key, level, value_ctx):
+		class_name = self.get_class_name()
+
+		if level == 1:
+			if key not in PREDEFINED_CONNTRACK_KEYS:
+				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
+			return
+
+		if parent_key == "":
+			exit_NaCl(value_ctx, "Internal error: Parent key of " + key + " has not been given")
+
+		if level == 2:
+			if parent_key == CONNTRACK_KEY_TIMEOUT and key not in PREDEFINED_CONNTRACK_TIMEOUT_KEYS:
+				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key + " in " + self.name + "." + parent_key)
+		elif level == 3:
+			if parent_key not in PREDEFINED_CONNTRACK_TIMEOUT_KEYS:
+				exit_NaCl(value_ctx, "Internal error: Invalid parent key " + parent_key + " of " + key)
+			if key not in PREDEFINED_CONNTRACK_TIMEOUT_INNER_KEYS:
+				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
+		else:
+			exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
+
+	# Overriding
+	def resolve_dictionary_value(self, dictionary, key, value):
+		# Add found value
+		dictionary[key] = self.nacl_state.transpile_value(value)
+
+	# add_conntrack adds the conntrack object to the nacl_state's pystache data,
+	# which makes it available in the mustache file
 	def add_conntrack(self):
 		timeout = self.members.get(CONNTRACK_KEY_TIMEOUT)
 		timeouts = []
@@ -98,34 +128,6 @@ class Conntrack(Typed):
 			CONNTRACK_KEY_RESERVE: 				self.members.get(CONNTRACK_KEY_RESERVE),
 			TEMPLATE_KEY_CONNTRACK_TIMEOUTS: 	timeouts
 		})
-
-	# Overriding
-	def validate_dictionary_key(self, key, parent_key, level, value_ctx):
-		class_name = self.get_class_name()
-
-		if level == 1:
-			if key not in PREDEFINED_CONNTRACK_KEYS:
-				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
-			return
-
-		if parent_key == "":
-			exit_NaCl(value_ctx, "Internal error: Parent key of " + key + " has not been given")
-
-		if level == 2:
-			if parent_key == CONNTRACK_KEY_TIMEOUT and key not in PREDEFINED_CONNTRACK_TIMEOUT_KEYS:
-				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key + " in " + self.name + "." + parent_key)
-		elif level == 3:
-			if parent_key not in PREDEFINED_CONNTRACK_TIMEOUT_KEYS:
-				exit_NaCl(value_ctx, "Internal error: Invalid parent key " + parent_key + " of " + key)
-			if key not in PREDEFINED_CONNTRACK_TIMEOUT_INNER_KEYS:
-				exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
-		else:
-			exit_NaCl(value_ctx, "Invalid " + class_name + " member " + key)
-
-	# Overriding
-	def resolve_dictionary_value(self, dictionary, key, value):
-		# Add found value
-		dictionary[key] = self.nacl_state.transpile_value(value)
 
 	# Main processing method
 	def process(self):
