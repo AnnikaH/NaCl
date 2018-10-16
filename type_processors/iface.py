@@ -321,6 +321,8 @@ class Iface(Typed):
             TEMPLATE_KEY_FUNCTION_NAMES:    function_names
         })
 
+    # Get the pystache object for either ip4 or ip6 (based on the protocol_key given)
+    # Called by the add_iface method
     def get_pystache_ip_object(self, protocol_key):
         if protocol_key != IFACE_KEY_IP4 and protocol_key != IFACE_KEY_IP6:
             exit_NaCl_internal_error("Invalid protocol key (" + protocol_key + ") given to Iface's get_pystache_ip_object method. " + \
