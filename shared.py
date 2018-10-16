@@ -302,28 +302,10 @@ legal_nested_subtypes = {
     IP:     [IP, TCP, UDP, ICMP]
 }
 
-# TODO
-# To be implemented in IncludeOS:
-
-OIF     = "oif"
-OIFNAME = "oifname"
-IIF     = "iif"
-IIFNAME = "iifname"
-
-INCLUDEOS_OIF       = "stack2.oif()"
-INCLUDEOS_OIFNAME   = "stack2.oifname()"
-INCLUDEOS_IIF       = "stack.iif()"
-INCLUDEOS_IIFNAME   = "stack.iifname()"
-
 # TODO: Move this dictionary into the NaCl_state class and implement register methods
 # so that the different modules can check in/register their values
 # Built-in/predefined constants that can be used as values in NaCl
 predefined_values_cpp = {
-
-    OIF:        INCLUDEOS_OIF,
-    OIFNAME:    INCLUDEOS_OIFNAME,
-    IIF:        INCLUDEOS_IIF,
-    IIFNAME:    INCLUDEOS_IIFNAME,
 
     # TCP flags
 
