@@ -29,8 +29,8 @@ TIMER_KEY_INTERVAL  = "interval"
 TIMER_KEY_DATA      = "data"
 
 PREDEFINED_TIMER_KEYS = [
-	TIMER_KEY_INTERVAL,
-	TIMER_KEY_DATA
+    TIMER_KEY_INTERVAL,
+    TIMER_KEY_DATA
 ]
 
 # ---- Timer values ----
