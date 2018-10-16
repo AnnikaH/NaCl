@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 # To avoid: <...>/NaCl/type_processors/iface.py:1: RuntimeWarning: Parent module '<...>/NaCl/type_processors' not found while handling absolute import
 
-from NaCl import exit_NaCl, Typed, BASE_TYPE_TYPED_INIT, BASE_TYPE_FUNCTION
+from NaCl import exit_NaCl, exit_NaCl_internal_error, Typed, BASE_TYPE_TYPED_INIT, BASE_TYPE_FUNCTION
 from shared import *
 # TYPE_IFACE, TYPE_NAT, TEMPLATE_KEY_IFACE_PUSHES, TEMPLATE_KEY_ENABLE_CT_IFACES, TEMPLATE_KEY_HAS_NATS,
 # TRUE, FALSE
@@ -321,6 +321,75 @@ class Iface(Typed):
             TEMPLATE_KEY_FUNCTION_NAMES:    function_names
         })
 
+    def get_pystache_ip_object(self, protocol_key):
+        if protocol_key != IFACE_KEY_IP4 and protocol_key != IFACE_KEY_IP6:
+            exit_NaCl_internal_error("Invalid protocol key (" + protocol_key + ") given to Iface's get_pystache_ip_object method. " + \
+                "Valid keys are " + IFACE_KEY_IP4 + " and " + IFACE_KEY_IP6)
+
+        config_is_static = False
+        config_is_auto = False
+        config_is_auto_fallback = False
+
+        ip = self.members.get(protocol_key)
+        if ip is not None:
+            # Error if ip (4 or 6) is not a dictionary (contains key value pairs)
+            if not isinstance(ip, dict):
+                predefined_keys = PREDEFINED_IFACE_IP4_KEYS if protocol_key == IFACE_KEY_IP4 else PREDEFINED_IFACE_IP6_KEYS
+                exit_NaCl(self.ctx, "Invalid value of Iface member " + protocol_key + \
+                    ". It needs to be an object containing " + ", ".join(predefined_keys))
+
+            config = ip.get(IFACE_KEY_CONFIG)
+            # If this is a vlan, require network configuration:
+            if self.members.get(IFACE_KEY_VLAN) is not None:
+                # Validate ip(4 or 6)'s config member
+                # config value has previously been resolved to a string (lower case) (in resolve_dictionary_value)
+                iface_key_netmask_or_prefix = IFACE_KEY_NETMASK if protocol_key == IFACE_KEY_IP4 else IFACE_KEY_PREFIX
+                if (config is None or config != AUTO_CONFIG) and \
+                    (ip.get(IFACE_KEY_ADDRESS) is None or ip.get(iface_key_netmask_or_prefix) is None):
+                    exit_NaCl(self.ctx, "The members " + IFACE_KEY_ADDRESS + " and " + iface_key_netmask_or_prefix + \
+                        " must be set for every vlan Iface (" + protocol_key + " member) if" + \
+                        " the Iface configuration hasn't been set to " + AUTO_CONFIG)
+                elif config is not None and config == AUTO_CONFIG and \
+                    (ip.get(IFACE_KEY_ADDRESS) is not None or \
+                    ip.get(iface_key_netmask_or_prefix) is not None or \
+                    ip.get(IFACE_KEY_GATEWAY) is not None or \
+                    ip.get(IFACE_KEY_DNS) is not None):
+                    exit_NaCl(self.ctx, "An Iface with " + protocol_key + " config set to " + AUTO_CONFIG + \
+                        " can not specify " + IFACE_KEY_ADDRESS + ", " + iface_key_netmask_or_prefix + ", " + \
+                        IFACE_KEY_GATEWAY + " or " + IFACE_KEY_DNS)
+
+                # It is not allowed (yet) to set buffer_limit or send_queue_limit on a vlan
+                if self.members.get(IFACE_KEY_BUFFER_LIMIT) is not None or self.members.get(IFACE_KEY_SEND_QUEUE_LIMIT) is not None:
+                    exit_NaCl(self.ctx, "The members send_queue_limit and buffer_limit can not be set on an Iface that is a vlan")
+
+            if config is None or config == STATIC_CONFIG:
+                config_is_static = True
+            elif config == AUTO_CONFIG:
+                config_is_auto = True
+            else: # config == AUTO_FALLBACK_CONFIG
+                config_is_auto_fallback = True
+
+        pystache_ip_obj = None
+        if ip is not None:
+            pystache_ip_obj = {
+                TEMPLATE_KEY_ADDRESS:                   ip.get(IFACE_KEY_ADDRESS),
+                TEMPLATE_KEY_GATEWAY:                   ip.get(IFACE_KEY_GATEWAY),
+                TEMPLATE_KEY_CONFIG_IS_STATIC:          config_is_static,
+                TEMPLATE_KEY_CONFIG_IS_AUTO:            config_is_auto,
+                TEMPLATE_KEY_CONFIG_IS_AUTO_FALLBACK:   config_is_auto_fallback
+            }
+            if protocol_key == IFACE_KEY_IP4:
+                pystache_ip_obj[TEMPLATE_KEY_NETMASK]   = ip.get(IFACE_KEY_NETMASK)
+                pystache_ip_obj[TEMPLATE_KEY_DNS]       = ip.get(IFACE_KEY_DNS)
+            else: # protocol_key == IFACE_KEY_IP6
+                pystache_ip_obj[TEMPLATE_KEY_PREFIX]    = ip.get(IFACE_KEY_PREFIX)
+                # pystache_ip_obj[TEMPLATE_KEY_DNS]     = ip.get(IFACE_KEY_DNS)
+
+        # Else we allow an Iface to be configured without network (ip4 and/or ip6)
+        # (f.ex. if the user wants to set buffer_limit or send_queue_limit on an Iface without having to configure it)
+
+        return [ pystache_ip_obj ]
+
     def add_iface(self):
         # This method should also validate the Iface object, f.ex. that every mandatory field is set
 
@@ -342,115 +411,8 @@ class Iface(Typed):
                 if el_idx is not None and el_idx == index and el_vlan is None and self.members.get(IFACE_KEY_VLAN) is None:
                     exit_NaCl(self.ctx, "Another Iface has been defined with index " + el_idx)
 
-        vlan = self.members.get(IFACE_KEY_VLAN)
-
-        # -- ip4 --
-
-        ip4_config_is_static = False
-        ip4_config_is_auto = False
-        ip4_config_is_auto_fallback = False
-
-        ip4 = self.members.get(IFACE_KEY_IP4)
-        if ip4 is not None:
-            # Error if ip4 is not a dictionary (contains key value pairs)
-            if not isinstance(ip4, dict):
-                exit_NaCl(self.ctx, "Invalid value of Iface member " + IFACE_KEY_IP4 + \
-                    ". It needs to be an object containing " + ", ".join(PREDEFINED_IFACE_IP4_KEYS))
-
-            config = ip4.get(IFACE_KEY_CONFIG)
-            # If this is a vlan, require network configuration:
-            if vlan is not None:
-                # Validate ip4's config member
-                # config value has previously been resolved to a string (lower case) (in resolve_dictionary_value)
-                if (config is None or config != AUTO_CONFIG) and (ip4.get(IFACE_KEY_ADDRESS) is None or ip4.get(IFACE_KEY_NETMASK) is None):
-                    exit_NaCl(self.ctx, "The members " + IFACE_KEY_ADDRESS + " and " + IFACE_KEY_NETMASK + " must be set for every vlan Iface (ip4 member) if" + \
-                        " the Iface configuration hasn't been set to " + AUTO_CONFIG)
-                elif config is not None and config == AUTO_CONFIG and \
-                    (ip4.get(IFACE_KEY_ADDRESS) is not None or \
-                    ip4.get(IFACE_KEY_NETMASK) is not None or \
-                    ip4.get(IFACE_KEY_GATEWAY) is not None or \
-                    ip4.get(IFACE_KEY_DNS) is not None):
-                    exit_NaCl(self.ctx, "An Iface with ip4 config set to " + AUTO_CONFIG + " can not specify " + IFACE_KEY_ADDRESS + \
-                        ", " + IFACE_KEY_NETMASK + ", " + IFACE_KEY_GATEWAY + " or " + IFACE_KEY_DNS)
-
-                # It is not allowed (yet) to set buffer_limit or send_queue_limit on a vlan
-                if self.members.get(IFACE_KEY_BUFFER_LIMIT) is not None or self.members.get(IFACE_KEY_SEND_QUEUE_LIMIT) is not None:
-                    exit_NaCl(self.ctx, "The members send_queue_limit and buffer_limit can not be set on an Iface that is a vlan")
-
-            if config is None or config == STATIC_CONFIG:
-                ip4_config_is_static = True
-            elif config == AUTO_CONFIG:
-                ip4_config_is_auto = True
-            else: # config == AUTO_FALLBACK_CONFIG
-                ip4_config_is_auto_fallback = True
-
-        pystache_ip4 = None
-        if ip4 is not None:
-            pystache_ip4 = [{
-                TEMPLATE_KEY_ADDRESS:   ip4.get(IFACE_KEY_ADDRESS),
-                TEMPLATE_KEY_NETMASK:   ip4.get(IFACE_KEY_NETMASK),
-                TEMPLATE_KEY_GATEWAY:   ip4.get(IFACE_KEY_GATEWAY),
-                TEMPLATE_KEY_DNS:       ip4.get(IFACE_KEY_DNS),
-
-                TEMPLATE_KEY_CONFIG_IS_STATIC:          ip4_config_is_static,
-                TEMPLATE_KEY_CONFIG_IS_AUTO:            ip4_config_is_auto,
-                TEMPLATE_KEY_CONFIG_IS_AUTO_FALLBACK:   ip4_config_is_auto_fallback
-            }]
-
-        # -- ip6 --
-
-        ip6_config_is_static = False
-        ip6_config_is_auto = False
-        ip6_config_is_auto_fallback = False
-
-        ip6 = self.members.get(IFACE_KEY_IP6)
-        if ip6 is not None:
-            # Error if ip6 is not a dictionary (contains key value pairs)
-            if not isinstance(ip6, dict):
-                exit_NaCl(self.ctx, "Invalid value of Iface member " + IFACE_KEY_IP6 + \
-                    ". It needs to be an object containing " + ", ".join(PREDEFINED_IFACE_IP6_KEYS))
-
-            # If this is a vlan, require network configuration:
-            config = ip6.get(IFACE_KEY_CONFIG)
-            if vlan is not None:
-                # Validate ip6's config member
-                # config value has previously been resolved to a string (lower case) (in resolve_dictionary_value)
-                if (config is None or config != AUTO_CONFIG) and (ip6.get(IFACE_KEY_ADDRESS) is None or ip6.get(IFACE_KEY_PREFIX) is None):
-                    exit_NaCl(self.ctx, "The members " + IFACE_KEY_ADDRESS + " and " + IFACE_KEY_PREFIX + " must be set for every vlan Iface (ip6 member) if" + \
-                        " the Iface configuration hasn't been set to " + AUTO_CONFIG)
-                elif config is not None and config == AUTO_CONFIG and \
-                    (ip6.get(IFACE_KEY_ADDRESS) is not None or \
-                    ip6.get(IFACE_KEY_PREFIX) is not None or \
-                    ip6.get(IFACE_KEY_GATEWAY) is not None):
-                    exit_NaCl(self.ctx, "An Iface with ip6 config set to " + AUTO_CONFIG + " can not specify " + IFACE_KEY_ADDRESS + \
-                        ", " + IFACE_KEY_PREFIX + " or " + IFACE_KEY_GATEWAY)
-
-                # It is not allowed (yet) to set buffer_limit or send_queue_limit on a vlan
-                if self.members.get(IFACE_KEY_BUFFER_LIMIT) is not None or self.members.get(IFACE_KEY_SEND_QUEUE_LIMIT) is not None:
-                    exit_NaCl(self.ctx, "The members send_queue_limit and buffer_limit can not be set on an Iface that is a vlan")
-
-            if config is None or config == STATIC_CONFIG:
-                ip6_config_is_static = True
-            elif config == AUTO_CONFIG:
-                ip6_config_is_auto = True
-            else: # config == AUTO_FALLBACK_CONFIG
-                ip6_config_is_auto_fallback = True
-
-        pystache_ip6 = None
-        if ip6 is not None:
-            pystache_ip6 = [{
-                TEMPLATE_KEY_ADDRESS:   ip6.get(IFACE_KEY_ADDRESS),
-                TEMPLATE_KEY_PREFIX:    ip6.get(IFACE_KEY_PREFIX),
-                TEMPLATE_KEY_GATEWAY:   ip6.get(IFACE_KEY_GATEWAY),
-                # TEMPLATE_KEY_DNS:     ip6.get(IFACE_KEY_DNS)
-
-                TEMPLATE_KEY_CONFIG_IS_STATIC:          ip6_config_is_static,
-                TEMPLATE_KEY_CONFIG_IS_AUTO:            ip6_config_is_auto,
-                TEMPLATE_KEY_CONFIG_IS_AUTO_FALLBACK:   ip6_config_is_auto_fallback
-            }]
-
-        # Else we allow an Iface to be configured without network (ip4 and/or ip6)
-        # (f.ex. if the user wants to set buffer_limit or send_queue_limit on an Iface without having to configure it)
+        pystache_ip4 = self.get_pystache_ip_object(IFACE_KEY_IP4)
+        pystache_ip6 = self.get_pystache_ip_object(IFACE_KEY_IP6)
 
         # -- add the Iface --
 
