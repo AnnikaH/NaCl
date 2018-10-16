@@ -21,21 +21,21 @@ from NaCl import exit_NaCl, Element, CPP
 from subtranspilers.function_transpiler import FUNCTION_TRANSPILER, ACCEPT, DROP
 from shared import *
 
-TYPE_FILTER 		= "filter"
-TYPE_REWRITE 		= "rewrite"
+TYPE_FILTER         = "filter"
+TYPE_REWRITE        = "rewrite"
 # Moved to shared.py: TYPE_NAT = "nat"
 
 VALID_DEFAULT_FILTER_VERDICTS = [
-	ACCEPT,
-	DROP
+    ACCEPT,
+    DROP
 ]
 
 # ---- TEMPLATE KEYS (pystache) ----
 
-TEMPLATE_KEY_CONTENT		= "content"
-TEMPLATE_KEY_FILTERS 		= "filters"
-TEMPLATE_KEY_NATS 			= "nats"
-TEMPLATE_KEY_REWRITES 		= "rewrites"
+TEMPLATE_KEY_CONTENT        = "content"
+TEMPLATE_KEY_FILTERS        = "filters"
+TEMPLATE_KEY_NATS           = "nats"
+TEMPLATE_KEY_REWRITES       = "rewrites"
 TEMPLATE_KEY_HAS_FUNCTIONS  = "has_functions"
 # Moved to shared.py: TEMPLATE_KEY_HAS_NATS = "has_nats"
 
@@ -57,9 +57,9 @@ class Function(Element):
         # an Iface's chain, should it be added to filters/nats/rewrites pystache list
 
         pystache_function_obj = {
-            TEMPLATE_KEY_NAME: 		self.name,
-            TEMPLATE_KEY_TITLE: 	self.name.title(),
-            TEMPLATE_KEY_CONTENT: 	self.res 	# Contains transpiled content
+            TEMPLATE_KEY_NAME:      self.name,
+            TEMPLATE_KEY_TITLE:     self.name.title(),
+            TEMPLATE_KEY_CONTENT:   self.res    # Contains transpiled content
         }
 
         iface_pushes = self.nacl_state.pystache_data.get(TEMPLATE_KEY_IFACE_PUSHES)
@@ -88,9 +88,9 @@ class Function(Element):
                         if type_t_lower == TYPE_FILTER:
                             self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_FILTERS, pystache_function_obj)
                         elif type_t_lower == TYPE_NAT:
-							self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_NATS, pystache_function_obj)
+                            self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_NATS, pystache_function_obj)
                         elif type_t_lower == TYPE_REWRITE:
-							self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_REWRITES, pystache_function_obj)
+                            self.nacl_state.append_to_pystache_data_list(TEMPLATE_KEY_REWRITES, pystache_function_obj)
                         else:
                             exit_NaCl(self.ctx.type_t(), "Functions of type " + self.type_t + " are not handled")
                         return self.res
@@ -158,7 +158,7 @@ def create_function_pystache_lists(nacl_state):
         TEMPLATE_KEY_FILTERS,
         TEMPLATE_KEY_NATS,
         TEMPLATE_KEY_REWRITES
-	])
+    ])
     # So pystache/mustache lists in nacl_state: filters, nats, rewrites
 
 def init(nacl_state):
