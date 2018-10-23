@@ -6,9 +6,9 @@ Iface eth0 {
         gateway: 10.0.0.1
     },
     ip6: {
-        address: 1280:FE80:0000:0000:0202:B3FF:FE1E:8328,
+        address: 1280:fe80:0000:0000:0202:b3ff:fe1e:8328,
         prefix: 64,
-        gateway: 1280:FE80:0000:0000:0202:B3FF:FE1E:9000
+        gateway: 1280:fe80:0000:0000:0202:b3ff:fe1e:9000
     }
 }
 
@@ -28,8 +28,8 @@ Iface eth2 {
     index: 2,
     ip6: {
         config: auto-with-fallback,
-        address: 1280:FE80:0000:0000:0202:B3FF:FE1E:8329,
+        address: 1280:fe80:0000:0000:0202:b3ff:fe1e:8329,
         prefix: 64,
-        gateway: 1280:FE80:0000:0000:0202:B3FF:FE1E:9000
+        gateway: 1280:fe80:0000:0000:0202:b3ff:fe1e:9000
     }
 }
