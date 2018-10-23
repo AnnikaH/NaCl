@@ -4,30 +4,6 @@ grammar NaCl;
 
 Whitespace: (' ' | '\t' | '\n' | '\r') -> channel(1);
 
-/* works for ip6, but not regular nacls (numbers)
-Hexdigit: [0-9A-Fa-f];
-
-/// H16     = 1*Hexdigit
-H16: Hexdigit Hexdigit Hexdigit Hexdigit
-    | Hexdigit Hexdigit Hexdigit
-    | Hexdigit Hexdigit
-    | Hexdigit
-    ;
-*/
-
-fragment Digit: [0-9];
-
-IPv6: [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
-    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
-    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
-    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
-    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
-    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
-    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] Colon
-    [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9];
-
-Number: Digit+;
-
 // Characters
 Hyphen : 	'-';
 Slash: 		'/' ;
@@ -71,36 +47,70 @@ Hash_comment: 	Hash ~[\r\n]* -> skip;
 Line_comment: 	Line_comment_start ~[\r\n]* -> skip;
 Block_comment: 	Block_comment_start .*? Block_comment_end -> skip;
 
-// NOTE: Identifier has to be at the end - after all the other lexer rules
-Identifier: [a-zA-Z] [a-zA-Z0-9_-]*;	// valid names of variables and characters in comments
+fragment A: [aA];
+fragment B: [bB];
+fragment C: [cC];
+fragment D: [dD];
+fragment E: [eE];
+fragment F: [fF];
 
-/* Parser */
+fragment D0: '0';
+fragment D1: '1';
+fragment D2: '2';
+fragment D3: '3';
+fragment D4: '4';
+fragment D5: '5';
+fragment D6: '6';
+fragment D7: '7';
+fragment D8: '8';
+fragment D9: '9';
+
+fragment Non_zero_digit: (D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9);
+
+fragment Digit: (D0 | Non_zero_digit);
+
+fragment Hexdigit: Digit | ( A | B | C | D | E | F );
+
+// This gives no room for fe80:0:0:0:0:0:0:ea1, only fe80:0000:0000:0000:0000:0000:0000:0ea1
+// time cpp_diff.sh:
+//  real    0m7.130s
+//  user    0m5.944s
+//  sys     0m1.108s
+fragment H16: Hexdigit Hexdigit Hexdigit Hexdigit;
+IPv6: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16;
+
+// vs.
 
 /*
-ipv6_addr: h16 ':' h16 ':' h16 ':' h16 ':' h16 ':' h16 ':' ls32
-   | '::' h16 ':' h16 ':' h16 ':' h16 ':' h16 ':' ls32
-   | h16? '::' h16 ':' h16 ':' h16 ':' h16 ':' ls32
-   | ((h16 ':')? h16)? '::' h16 ':' h16 ':' h16 ':' ls32
-   | (((h16 ':')? h16 ':')? h16)? '::' h16 ':' h16 ':' ls32
-   | ((((h16 ':')? h16 ':')? h16 ':')? h16)? '::' h16 ':' ls32
-   | (((((h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16)? '::' ls32
-   | ((((((h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16)? '::' h16
-   | (((((((h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16 ':')? h16)? '::'
-   ;
+// This GIVES room for fe80:0:0:0:0:0:0:ea1
+// time cpp_diff.sh:
+//  real    0m7.671s
+//  user    0m6.489s
+//  sys     0m1.101s
+fragment H16: Hexdigit Hexdigit Hexdigit Hexdigit
+    | Hexdigit Hexdigit Hexdigit
+    | Hexdigit Hexdigit
+    | Hexdigit
+    ;
+IPv6: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16;
 */
 
-/// ls32    = ( H16 ":" H16 ) / IPv4address
-// LS32: H16 Colon H16;
-//    | ipv4_addr
-//    ;
+// vs.
 
-// ---------- value ----------
-
-value: primitive_type | rng | string | value_name | obj | list_t;
-
-// ipv6_addr: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16;
 /*
-ipv6_addr: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon LS32
+// Gives room for short form, f.ex. ::1 (incl. LS32 / IPv4 syntax)
+// However, transpilation takes forever:
+// time cpp_diff.sh:
+//  real    0m25.698s
+//  user    0m24.206s
+//  sys     0m1.368s
+IPv4: Number Dot Number Dot Number Dot Number;
+fragment H16: Hexdigit Hexdigit Hexdigit Hexdigit
+    | Hexdigit Hexdigit Hexdigit
+    | Hexdigit Hexdigit
+    | Hexdigit
+    ;
+IPv6: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon LS32
     | Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon LS32
     | H16? Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon LS32
     | ((H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon H16 Colon LS32
@@ -108,31 +118,33 @@ ipv6_addr: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon LS32
     | ((((H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon LS32
     | (((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon LS32
     | ((((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16
-    | (((((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon
+    ;
+LS32: H16 Colon H16
+    | IPv4
     ;
 */
-/*
-ipv6_addr: H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16
-    | Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16
-    | H16? Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon H16 Colon H16
-    | ((H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon H16 Colon H16 Colon H16
-    | (((H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon H16 Colon H16
-    | ((((H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon H16 Colon H16
-    | (((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16 Colon H16
-    | ((((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon H16
-    | (((((((H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16 Colon)? H16)? Colon Colon
-    ;
-*/
+
+Number: D0 | ( Non_zero_digit Digit* )+;
+
+// NOTE: Identifier has to be at the end - after all the other lexer rules
+Identifier: [a-zA-Z] [a-zA-Z0-9_-]*;	// valid names of variables and characters in comments
+
+/* Parser */
+
+// ---------- value ----------
+
+value: primitive_type | rng | string | value_name | obj | list_t;
 
 primitive_type: numeric_type | bool_val | ipv4_cidr;
 numeric_type: integer | decimal | ipv4_addr | ipv6_addr;
 bool_val: 'true' | 'false';
 ipv4_cidr: ipv4_addr cidr_mask;
 cidr_mask: (Slash integer);
-integer: Number+
-		| Parenthesis_start Hyphen Number+ Parenthesis_end;
-decimal: Number+ Dot Number+
-		| Parenthesis_start Hyphen Number+ Dot Number+ Parenthesis_end;
+
+integer: Number
+        | Parenthesis_start Hyphen Number Parenthesis_end;
+decimal: Number Dot Number
+        | Parenthesis_start Hyphen Number Dot Number Parenthesis_end;
 ipv4_addr: Number Dot Number Dot Number Dot Number;
 ipv6_addr: IPv6;
 
@@ -186,8 +198,7 @@ initializer: value_name Colon value;
 
 // ---------- prog ----------
 
-expr: integer
-	| function
+expr: function
 	| typed_initializer
 	| initializer;
 
