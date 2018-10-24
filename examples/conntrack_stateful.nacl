@@ -23,10 +23,12 @@ Conntrack my_conntrack {
 
 Iface eth0 {
     index: 0,
-    address: 10.0.0.45,
-    netmask: 255.255.255.0,
-    gateway: 10.0.0.1,
-    prerouting: my_filter
+    ip4: {
+        address: 10.0.0.45,
+        netmask: 255.255.255.0,
+        gateway: 10.0.0.1,
+        prerouting: my_filter
+    }
 }
 
 Filter::IP my_filter {
