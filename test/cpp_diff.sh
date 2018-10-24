@@ -8,6 +8,7 @@ declare -a examples=(
     "assignments"
     "cidr"
     "config_options"
+    "conntrack_stateful"
     "conntrack_with_timeout_assignments"
     "conntrack_with_timeout"
     "conntrack"
