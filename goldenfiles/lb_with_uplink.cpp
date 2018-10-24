@@ -37,12 +37,12 @@ static microLB::Balancer* nacl_lb_obj = nullptr;
 void register_plugin_nacl() {
 	INFO("NaCl", "Registering NaCl plugin");
 
-	auto& outside = Interfaces::get(1);
-	outside.network_config(IP4::addr{10,0,0,43}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
+	auto& eth0_uplink = Interfaces::get(0);
+	eth0_uplink.network_config(IP4::addr{10,0,0,42}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
 	auto& inside = Interfaces::get(2);
 	inside.network_config(IP4::addr{10,0,0,44}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
-	auto& uplink = Interfaces::get(0);
-	uplink.network_config(IP4::addr{10,0,0,42}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
+	auto& outside = Interfaces::get(1);
+	outside.network_config(IP4::addr{10,0,0,43}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
 
 
 	// Load balancers

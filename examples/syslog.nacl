@@ -1,4 +1,4 @@
-Iface uplink {
+Iface eth0_uplink {
     ip4: {
         address: 10.0.0.40,
         netmask: 255.255.255.0,
@@ -7,7 +7,7 @@ Iface uplink {
     index: 0
 }
 
-Iface eth0 {
+Iface eth1 {
     ip4: {
         address: 10.0.0.45,
         netmask: 255.255.255.0,

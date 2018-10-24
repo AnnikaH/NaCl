@@ -66,10 +66,10 @@ return {nullptr, Filter_verdict_type::DROP};
 void register_plugin_nacl() {
 	INFO("NaCl", "Registering NaCl plugin");
 
-	auto& uplink = Interfaces::get(0);
-	uplink.network_config(IP4::addr{10,0,0,40}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
-	auto& eth0 = Interfaces::get(1);
-	eth0.network_config(IP4::addr{10,0,0,45}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
+	auto& eth0_uplink = Interfaces::get(0);
+	eth0_uplink.network_config(IP4::addr{10,0,0,40}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
+	auto& eth1 = Interfaces::get(1);
+	eth1.network_config(IP4::addr{10,0,0,45}, IP4::addr{255,255,255,0}, IP4::addr{10,0,0,1});
 
 	// Init syslog over UDP
 	Syslog::set_facility(std::make_unique<Syslog_udp>());
@@ -79,12 +79,12 @@ void register_plugin_nacl() {
 
 	custom_made_classes_from_nacl::My_Filter my_filter;
 
-	eth0.ip_obj().prerouting_chain().chain.push_back(my_filter);
+	eth1.ip_obj().prerouting_chain().chain.push_back(my_filter);
 
 	// Ct
 
 	nacl_ct_obj = std::make_shared<Conntrack>();
 
-	INFO("NaCl", "Enabling Conntrack on eth0");
-	eth0.enable_conntrack(nacl_ct_obj);
+	INFO("NaCl", "Enabling Conntrack on eth1");
+	eth1.enable_conntrack(nacl_ct_obj);
 }

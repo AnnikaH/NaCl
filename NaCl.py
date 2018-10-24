@@ -46,6 +46,8 @@ ICMP    = "icmp"
 CT      = "ct"
 IP      = "ip"
 
+UPLINK  = "uplink"
+
 # -------------------- Error handling --------------------
 
 def get_line_and_column(ctx):
@@ -85,7 +87,8 @@ class NaCl_state(object):
             UDP,
             ICMP,
             CT,
-            IP
+            IP,
+            UPLINK
         ]
 
         # Dictionary of type_processors (all typed NaCl elements like Iface, Conntrack and Gateway have a corresponding
