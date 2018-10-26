@@ -31,5 +31,5 @@ declare -a examples=(
 
 for i in "${examples[@]}"
 do
-    cat examples/$i.nacl | ./NaCl.py goldenfiles/$i.cpp
+    cat ../examples/$i.nacl | ../NaCl.py ../goldenfiles/$i.cpp
 done
